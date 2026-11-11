@@ -1,0 +1,3274 @@
+<!DOCTYPE html>
+<html lang="th" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LOGIX DATA QUALITY — แพลตฟอร์มวิเคราะห์การจัดส่งและตรวจสอบคุณภาพข้อมูล</title>
+  <!-- Google Fonts: Plus Jakarta Sans & Sarabun -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sarabun:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- PapaParse for high-performance CSV handling -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+  <style>
+    /* CSS Variables for Elegant Professional Theme */
+    :root {
+      --font-body: 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-heading: 'Plus Jakarta Sans', 'Sarabun', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+
+      /* Primary Palette - Indigo / Slate Professional */
+      --primary: #4338ca;
+      --primary-hover: #3730a3;
+      --primary-light: #eef2ff;
+      --primary-focus: rgba(67, 56, 202, 0.15);
+
+      /* Surface Colors (Light) */
+      --bg-app: #f8fafc;
+      --bg-sidebar: #ffffff;
+      --bg-surface: #ffffff;
+      --bg-card: #ffffff;
+      --bg-muted: #f1f5f9;
+      --bg-hover: #f8fafc;
+
+      /* Borders & Lines */
+      --border-subtle: #f1f5f9;
+      --border-color: #e2e8f0;
+      --border-strong: #cbd5e1;
+
+      /* Typography Colors */
+      --text-main: #0f172a;
+      --text-muted: #475569;
+      --text-sub: #64748b;
+      --text-light: #94a3b8;
+
+      /* Status & Severity Colors */
+      --error-bg: #fef2f2;
+      --error-border: #fecaca;
+      --error-text: #b91c1c;
+      --error-badge: #dc2626;
+
+      --warning-bg: #fffbeb;
+      --warning-border: #fde68a;
+      --warning-text: #b45309;
+      --warning-badge: #d97706;
+
+      --info-bg: #eff6ff;
+      --info-border: #bfdbfe;
+      --info-text: #1d4ed8;
+      --info-badge: #2563eb;
+
+      --success-bg: #f0fdf4;
+      --success-border: #bbf7d0;
+      --success-text: #15803d;
+      --success-badge: #16a34a;
+
+      /* Geometry & Shadows */
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --radius-xl: 18px;
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
+      --shadow-float: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+
+      /* Layout */
+      --sidebar-width: 270px;
+      --sidebar-collapsed: 78px;
+      --topbar-height: 70px;
+      --transition-fast: 0.18s ease;
+      --transition-normal: 0.25s ease;
+    }
+
+    [data-theme="dark"] {
+      --bg-app: #0b0f19;
+      --bg-sidebar: #0f172a;
+      --bg-surface: #131d32;
+      --bg-card: #131d32;
+      --bg-muted: #1e293b;
+      --bg-hover: #1e293b;
+
+      --border-subtle: #1e293b;
+      --border-color: #27354f;
+      --border-strong: #334155;
+
+      --text-main: #f8fafc;
+      --text-muted: #cbd5e1;
+      --text-sub: #94a3b8;
+      --text-light: #64748b;
+
+      --primary-light: rgba(67, 56, 202, 0.25);
+      --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+      --shadow-float: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+
+      --error-bg: rgba(185, 28, 28, 0.15);
+      --error-border: rgba(185, 28, 28, 0.35);
+      --error-text: #fca5a5;
+
+      --warning-bg: rgba(180, 83, 9, 0.15);
+      --warning-border: rgba(180, 83, 9, 0.35);
+      --warning-text: #fcd34d;
+
+      --info-bg: rgba(29, 78, 216, 0.15);
+      --info-border: rgba(29, 78, 216, 0.35);
+      --info-text: #93c5fd;
+
+      --success-bg: rgba(21, 128, 61, 0.15);
+      --success-border: rgba(21, 128, 61, 0.35);
+      --success-text: #86efac;
+    }
+
+    /* Reset & Base */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      outline: none;
+    }
+
+    body {
+      font-family: var(--font-body);
+      background-color: var(--bg-app);
+      color: var(--text-main);
+      display: flex;
+      min-height: 100vh;
+      overflow-x: hidden;
+      font-size: 14px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      transition: background-color var(--transition-normal), color var(--transition-normal);
+    }
+
+    /* Typography helper */
+    h1, h2, h3, h4, h5, h6 {
+      font-family: var(--font-heading);
+      color: var(--text-main);
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    /* =========================================================
+       SIDEBAR (Fixed, Modern, High-End Enterprise Look)
+       ========================================================= */
+    .sidebar {
+      width: var(--sidebar-width);
+      background-color: var(--bg-sidebar);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 100;
+      transition: width var(--transition-normal), transform var(--transition-normal);
+      user-select: none;
+    }
+
+    .sidebar.collapsed {
+      width: var(--sidebar-collapsed);
+    }
+
+    .sidebar-header {
+      padding: 20px 20px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-subtle);
+      height: var(--topbar-height);
+    }
+
+    .brand-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: inherit;
+      overflow: hidden;
+    }
+
+    .brand-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      flex-shrink: 0;
+      box-shadow: 0 4px 10px rgba(79, 70, 229, 0.35);
+    }
+
+    .brand-title {
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      white-space: nowrap;
+      line-height: 1.2;
+    }
+
+    .brand-sub {
+      font-size: 11px;
+      color: var(--text-sub);
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .sidebar.collapsed .brand-text {
+      display: none;
+    }
+
+    .sidebar-collapse-btn {
+      background: none;
+      border: 1px solid var(--border-color);
+      color: var(--text-sub);
+      width: 28px;
+      height: 28px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .sidebar-collapse-btn:hover {
+      background-color: var(--bg-muted);
+      color: var(--text-main);
+    }
+
+    .sidebar.collapsed .sidebar-collapse-btn {
+      margin: 0 auto;
+    }
+
+    /* Sidebar Navigation Menu */
+    .sidebar-nav {
+      flex: 1;
+      padding: 18px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      overflow-y: auto;
+    }
+
+    .nav-label {
+      font-size: 10.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-light);
+      padding: 10px 12px 4px;
+      white-space: nowrap;
+    }
+
+    .sidebar.collapsed .nav-label {
+      text-align: center;
+      font-size: 9px;
+      padding: 8px 0 2px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 11px 14px;
+      border-radius: var(--radius-md);
+      color: var(--text-muted);
+      text-decoration: none;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 13.5px;
+      transition: all var(--transition-fast);
+      position: relative;
+      border: 1px solid transparent;
+      white-space: nowrap;
+    }
+
+    .nav-item:hover {
+      background-color: var(--bg-hover);
+      color: var(--text-main);
+    }
+
+    .nav-item.active {
+      background-color: var(--primary-light);
+      color: var(--primary);
+      font-weight: 600;
+      border-color: rgba(67, 56, 202, 0.12);
+    }
+
+    [data-theme="dark"] .nav-item.active {
+      color: #c7d2fe;
+    }
+
+    .nav-item.active::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 18%;
+      bottom: 18%;
+      width: 4px;
+      border-radius: 0 4px 4px 0;
+      background: var(--primary);
+    }
+
+    .nav-icon {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .nav-title {
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .sidebar.collapsed .nav-title,
+    .sidebar.collapsed .nav-badge {
+      display: none;
+    }
+
+    .nav-badge {
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 20px;
+      font-weight: 700;
+      background: var(--bg-muted);
+      color: var(--text-sub);
+    }
+
+    .nav-item.active .nav-badge {
+      background: var(--primary);
+      color: #ffffff;
+    }
+
+    .nav-badge.danger {
+      background: var(--error-badge);
+      color: #ffffff;
+    }
+
+    /* Sidebar Footer */
+    .sidebar-footer {
+      padding: 14px 14px 18px;
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .dataset-pill {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      border-radius: var(--radius-sm);
+      background-color: var(--bg-muted);
+      font-size: 12px;
+      color: var(--text-sub);
+      overflow: hidden;
+    }
+
+    .sidebar.collapsed .dataset-pill {
+      display: none;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: #10b981;
+      box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+      flex-shrink: 0;
+    }
+
+    /* =========================================================
+       MAIN CONTENT WRAPPER & TOPBAR
+       ========================================================= */
+    .app-main {
+      flex: 1;
+      margin-left: var(--sidebar-width);
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      min-height: 100vh;
+      transition: margin-left var(--transition-normal);
+    }
+
+    .sidebar.collapsed ~ .app-main {
+      margin-left: var(--sidebar-collapsed);
+    }
+
+    .topbar {
+      height: var(--topbar-height);
+      background-color: var(--bg-surface);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 28px;
+      position: sticky;
+      top: 0;
+      z-index: 90;
+      gap: 16px;
+    }
+
+    .breadcrumb-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .breadcrumb-path {
+      font-size: 12px;
+      color: var(--text-sub);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .breadcrumb-current {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 8px 14px;
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      border: 1px solid transparent;
+      text-decoration: none;
+      white-space: nowrap;
+      font-family: var(--font-body);
+    }
+
+    .btn-primary {
+      background-color: var(--primary);
+      color: #ffffff;
+    }
+    .btn-primary:hover {
+      background-color: var(--primary-hover);
+      box-shadow: 0 2px 8px rgba(67, 56, 202, 0.3);
+    }
+
+    .btn-secondary {
+      background-color: var(--bg-muted);
+      border-color: var(--border-color);
+      color: var(--text-main);
+    }
+    .btn-secondary:hover {
+      background-color: var(--border-color);
+    }
+
+    .btn-outline {
+      background: transparent;
+      border-color: var(--border-color);
+      color: var(--text-muted);
+    }
+    .btn-outline:hover {
+      background-color: var(--bg-muted);
+      color: var(--text-main);
+      border-color: var(--border-strong);
+    }
+
+    .btn-icon {
+      padding: 8px;
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-md);
+    }
+
+    /* Global Filter Bar (Collapsible / Toolbar) */
+    .filter-bar {
+      background-color: var(--bg-surface);
+      border-bottom: 1px solid var(--border-color);
+      padding: 12px 28px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .filter-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-sub);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .filter-select {
+      background-color: var(--bg-muted);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      border-radius: var(--radius-sm);
+      padding: 6px 12px;
+      font-size: 12.5px;
+      font-family: var(--font-body);
+      cursor: pointer;
+      transition: border-color var(--transition-fast);
+    }
+    .filter-select:focus {
+      border-color: var(--primary);
+    }
+
+    .filter-search {
+      position: relative;
+      flex: 1;
+      min-width: 180px;
+    }
+
+    .filter-search input {
+      width: 100%;
+      background-color: var(--bg-muted);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 6px 12px 6px 32px;
+      font-size: 12.5px;
+      color: var(--text-main);
+      font-family: var(--font-body);
+      transition: all var(--transition-fast);
+    }
+    .filter-search input:focus {
+      border-color: var(--primary);
+      background-color: var(--bg-surface);
+      box-shadow: 0 0 0 3px var(--primary-focus);
+    }
+
+    .filter-search-icon {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-light);
+      pointer-events: none;
+    }
+
+    /* =========================================================
+       PAGE VIEWS CONTAINER (Page-Switching instead of Scrolling)
+       ========================================================= */
+    .view-container {
+      flex: 1;
+      padding: 28px;
+      display: none;
+      animation: fadeInView 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .view-container.active {
+      display: block;
+    }
+
+    @keyframes fadeInView {
+      from {
+        opacity: 0;
+        transform: translateY(6px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Common Card Design */
+    .card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 22px;
+      box-shadow: var(--shadow-card);
+      position: relative;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+      gap: 12px;
+    }
+
+    .card-title {
+      font-size: 15px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-main);
+    }
+
+    .card-sub {
+      font-size: 12px;
+      color: var(--text-sub);
+      font-weight: 400;
+      margin-top: 2px;
+    }
+
+    /* =========================================================
+       VIEW 1: DASHBOARD & KPIS
+       ========================================================= */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 18px;
+      margin-bottom: 24px;
+    }
+
+    .kpi-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: var(--shadow-card);
+      transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .kpi-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-float);
+    }
+
+    .kpi-card::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--accent-gradient, #4338ca);
+    }
+
+    .kpi-card.accent-blue { --accent-gradient: linear-gradient(90deg, #3b82f6, #60a5fa); }
+    .kpi-card.accent-purple { --accent-gradient: linear-gradient(90deg, #6366f1, #a855f7); }
+    .kpi-card.accent-emerald { --accent-gradient: linear-gradient(90deg, #10b981, #34d399); }
+    .kpi-card.accent-amber { --accent-gradient: linear-gradient(90deg, #f59e0b, #fbbf24); }
+    .kpi-card.accent-rose { --accent-gradient: linear-gradient(90deg, #f43f5e, #fb7185); }
+
+    .kpi-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .kpi-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-sub);
+    }
+
+    .kpi-icon-wrap {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: var(--bg-muted);
+      color: var(--text-main);
+    }
+
+    .kpi-val {
+      font-family: var(--font-heading);
+      font-size: 27px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+      color: var(--text-main);
+    }
+
+    .kpi-unit {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-sub);
+      margin-left: 4px;
+    }
+
+    .kpi-scope {
+      font-size: 11.5px;
+      padding: 6px 10px;
+      border-radius: var(--radius-sm);
+      background-color: var(--bg-muted);
+      color: var(--text-muted);
+      line-height: 1.4;
+      border-left: 2px solid var(--primary);
+    }
+
+    /* Notice Banner */
+    .banner-box {
+      border-radius: var(--radius-md);
+      padding: 14px 18px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 22px;
+      font-size: 13px;
+    }
+
+    .banner-warning {
+      background-color: var(--warning-bg);
+      border: 1px solid var(--warning-border);
+      color: var(--warning-text);
+    }
+
+    .banner-info {
+      background-color: var(--info-bg);
+      border: 1px solid var(--info-border);
+      color: var(--info-text);
+    }
+
+    /* =========================================================
+       VIEW 2: ANALYTICS & CHARTS
+       ========================================================= */
+    .chart-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 22px;
+    }
+
+    @media (max-width: 1100px) {
+      .chart-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .chart-card {
+      min-height: 380px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chart-body {
+      flex: 1;
+      position: relative;
+      width: 100%;
+      height: 290px;
+    }
+
+    .toggle-group {
+      display: inline-flex;
+      background-color: var(--bg-muted);
+      border-radius: var(--radius-sm);
+      padding: 3px;
+      border: 1px solid var(--border-color);
+    }
+
+    .toggle-btn {
+      padding: 4px 10px;
+      font-size: 11.5px;
+      font-weight: 600;
+      border-radius: 4px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      color: var(--text-sub);
+      transition: all var(--transition-fast);
+      font-family: var(--font-body);
+    }
+
+    .toggle-btn.active {
+      background-color: var(--bg-card);
+      color: var(--primary);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+    }
+
+    /* =========================================================
+       VIEW 3: DATA QUALITY INSPECTOR
+       ========================================================= */
+    .dq-summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 18px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 992px) {
+      .dq-summary-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .dq-stat-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 18px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .dq-stat-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .dq-stat-icon.red { background: var(--error-bg); color: var(--error-text); }
+    .dq-stat-icon.amber { background: var(--warning-bg); color: var(--warning-text); }
+    .dq-stat-icon.blue { background: var(--info-bg); color: var(--info-text); }
+    .dq-stat-icon.green { background: var(--success-bg); color: var(--success-text); }
+
+    .dq-stat-val {
+      font-family: var(--font-heading);
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--text-main);
+      line-height: 1.1;
+    }
+
+    .dq-stat-lbl {
+      font-size: 12px;
+      color: var(--text-sub);
+      font-weight: 500;
+    }
+
+    /* Categories Breakdown */
+    .category-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .cat-box {
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      background-color: var(--bg-surface);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .cat-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .cat-name {
+      font-weight: 700;
+      font-size: 13.5px;
+    }
+
+    .cat-count {
+      font-size: 12px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 12px;
+      background: var(--bg-muted);
+      color: var(--text-main);
+    }
+
+    .cat-desc {
+      font-size: 12px;
+      color: var(--text-sub);
+      line-height: 1.4;
+    }
+
+    /* =========================================================
+       VIEW 4: ERROR REPORT TABLE
+       ========================================================= */
+    .table-container {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow-card);
+    }
+
+    .table-toolbar {
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-color);
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .data-table-wrap {
+      max-height: 580px;
+      overflow-y: auto;
+      overflow-x: auto;
+    }
+
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 13px;
+    }
+
+    table.data-table th {
+      background-color: var(--bg-muted);
+      color: var(--text-sub);
+      font-weight: 600;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border-color);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      white-space: nowrap;
+      font-size: 12px;
+      letter-spacing: 0.02em;
+    }
+
+    table.data-table td {
+      padding: 11px 14px;
+      border-bottom: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      vertical-align: middle;
+    }
+
+    table.data-table tr:hover td {
+      background-color: var(--bg-hover);
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11.5px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .badge-error {
+      background: var(--error-bg);
+      border: 1px solid var(--error-border);
+      color: var(--error-text);
+    }
+
+    .badge-warning {
+      background: var(--warning-bg);
+      border: 1px solid var(--warning-border);
+      color: var(--warning-text);
+    }
+
+    .badge-info {
+      background: var(--info-bg);
+      border: 1px solid var(--info-border);
+      color: var(--info-text);
+    }
+
+    .badge-neutral {
+      background: var(--bg-muted);
+      border: 1px solid var(--border-color);
+      color: var(--text-sub);
+    }
+
+    .cell-mono {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .raw-val-cell {
+      max-width: 150px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      background: var(--bg-muted);
+      padding: 2px 6px;
+      border-radius: 4px;
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+    }
+
+    /* =========================================================
+       VIEW 5: RAW DATASET INSPECTOR
+       ========================================================= */
+    .raw-table-meta {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 12.5px;
+      color: var(--text-sub);
+    }
+
+    .has-issue-cell {
+      background-color: rgba(220, 38, 38, 0.08) !important;
+      position: relative;
+    }
+
+    .has-warning-cell {
+      background-color: rgba(217, 119, 6, 0.08) !important;
+    }
+
+    /* =========================================================
+       VIEW 6: BUSINESS IMPACT & RECONCILIATION
+       ========================================================= */
+    .impact-compare-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 900px) {
+      .impact-compare-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .impact-card {
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      background-color: var(--bg-surface);
+    }
+
+    .impact-card.raw-side {
+      border-left: 4px solid var(--error-badge);
+    }
+
+    .impact-card.clean-side {
+      border-left: 4px solid var(--success-badge);
+    }
+
+    .impact-metric-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .impact-metric-row:last-child {
+      border-bottom: none;
+    }
+
+    .impact-val {
+      font-family: var(--font-heading);
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 48px 20px;
+      color: var(--text-sub);
+    }
+    .empty-state-icon {
+      font-size: 40px;
+      margin-bottom: 12px;
+      opacity: 0.6;
+    }
+
+    /* File Modal / Upload */
+    .hidden-file-input {
+      display: none;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .sidebar {
+        transform: translateX(-100%);
+      }
+      .sidebar.mobile-open {
+        transform: translateX(0);
+      }
+      .app-main {
+        margin-left: 0 !important;
+      }
+      .view-container {
+        padding: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- =========================================================
+       SIDEBAR NAVIGATION
+       ========================================================= -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <a href="#" class="brand-wrap" onclick="switchView('overview'); return false;">
+        <div class="brand-icon">
+          <i data-lucide="shield-check" style="width: 22px; height: 22px;"></i>
+        </div>
+        <div class="brand-text">
+          <div class="brand-title">LOGIX ANALYTICS</div>
+          <div class="brand-sub">Data Quality Platform</div>
+        </div>
+      </a>
+      <button class="sidebar-collapse-btn" id="sidebarCollapseToggle" title="ยุบ / ขยายเมนู">
+        <i data-lucide="chevron-left" style="width: 16px; height: 16px;" id="collapseIcon"></i>
+      </button>
+    </div>
+
+    <!-- Navigation Menu Items (Change views completely on click) -->
+    <nav class="sidebar-nav">
+      <div class="nav-label">วิเคราะห์และภาพรวม</div>
+
+      <div class="nav-item active" data-view="overview" onclick="switchView('overview')">
+        <div class="nav-icon"><i data-lucide="layout-dashboard"></i></div>
+        <span class="nav-title">1. Dashboard ภาพรวม</span>
+        <span class="nav-badge" id="kpiBadge">5 KPI</span>
+      </div>
+
+      <div class="nav-item" data-view="charts" onclick="switchView('charts')">
+        <div class="nav-icon"><i data-lucide="bar-chart-3"></i></div>
+        <span class="nav-title">2. กราฟวิเคราะห์การจัดส่ง</span>
+        <span class="nav-badge">4 กราฟ</span>
+      </div>
+
+      <div class="nav-label">การตรวจสอบข้อมูล</div>
+
+      <div class="nav-item" data-view="quality" onclick="switchView('quality')">
+        <div class="nav-icon"><i data-lucide="shield-alert"></i></div>
+        <span class="nav-title">3. ตรวจจับข้อมูลผิดปกติ</span>
+        <span class="nav-badge danger" id="sideAnomalyBadge">0</span>
+      </div>
+
+      <div class="nav-item" data-view="errors" onclick="switchView('errors')">
+        <div class="nav-icon"><i data-lucide="alert-triangle"></i></div>
+        <span class="nav-title">4. รายงานข้อผิดพลาด</span>
+        <span class="nav-badge" id="sideErrorCount">0 รายการ</span>
+      </div>
+
+      <div class="nav-label">ชุดข้อมูล & หลักเกณฑ์</div>
+
+      <div class="nav-item" data-view="raw" onclick="switchView('raw')">
+        <div class="nav-icon"><i data-lucide="database"></i></div>
+        <span class="nav-title">5. ตารางข้อมูลต้นฉบับ</span>
+        <span class="nav-badge" id="sideRowCount">200 แถว</span>
+      </div>
+
+      <div class="nav-item" data-view="impact" onclick="switchView('impact')">
+        <div class="nav-icon"><i data-lucide="scale"></i></div>
+        <span class="nav-title">6. ผลกระทบต่อ KPI & กราฟ</span>
+      </div>
+    </nav>
+
+    <!-- Sidebar Bottom Info -->
+    <div class="sidebar-footer">
+      <div class="dataset-pill">
+        <div class="status-dot"></div>
+        <div style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+          <strong id="activeFileName">delivery_dirty_200.csv</strong>
+          <div style="font-size: 11px; color: var(--text-light);" id="activeFileMeta">200 แถว • 19 คอลัมน์</div>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 8px;">
+        <button class="btn btn-outline" style="flex: 1; font-size: 12px; padding: 6px 8px;" onclick="triggerCsvUpload()">
+          <i data-lucide="upload" style="width: 14px; height: 14px;"></i> อัปโหลด CSV
+        </button>
+        <button class="btn btn-outline btn-icon" onclick="resetToDefaultData()" title="รีเซ็ตกลับเป็นไฟล์ตั้งต้น">
+          <i data-lucide="rotate-ccw" style="width: 14px; height: 14px;"></i>
+        </button>
+        <button class="btn btn-outline btn-icon" id="themeToggleBtn" onclick="toggleTheme()" title="เปลี่ยนธีม สว่าง/มืด">
+          <i data-lucide="moon" style="width: 14px; height: 14px;" id="themeIcon"></i>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- =========================================================
+       MAIN APPLICATION LAYOUT
+       ========================================================= -->
+  <main class="app-main">
+
+    <!-- Top Navigation Bar -->
+    <header class="topbar">
+      <div class="breadcrumb-wrap">
+        <div class="breadcrumb-path">
+          <span>ระบบติดตามและตรวจสอบข้อมูลการขนส่ง</span>
+          <span>/</span>
+          <span id="breadcrumbCategory">ภารกิจที่ 1</span>
+        </div>
+        <h1 class="breadcrumb-current" id="viewTitle">Dashboard ภาพรวม & ตัวชี้วัดหลัก (KPIs)</h1>
+      </div>
+
+      <div class="topbar-actions">
+        <!-- Quick Quality Alerts in Header -->
+        <div class="badge badge-error" style="cursor: pointer;" onclick="switchView('errors'); setTableFilter('ผิดแน่นอน');">
+          <i data-lucide="alert-circle" style="width: 13px; height: 13px;"></i>
+          <span id="topDefiniteErrors">0 ผิดแน่นอน</span>
+        </div>
+        <div class="badge badge-warning" style="cursor: pointer;" onclick="switchView('errors'); setTableFilter('ควรตรวจสอบ');">
+          <i data-lucide="alert-triangle" style="width: 13px; height: 13px;"></i>
+          <span id="topSuspiciousErrors">0 ควรตรวจสอบ</span>
+        </div>
+        <div class="badge badge-neutral" style="cursor: pointer;" onclick="switchView('errors'); setTableFilter('ค่าว่างที่อาจสมเหตุสมผล');">
+          <i data-lucide="info" style="width: 13px; height: 13px;"></i>
+          <span id="topValidEmpties">0 ค่าว่างสมเหตุสมผล</span>
+        </div>
+
+        <button class="btn btn-secondary" onclick="exportErrorReportCsv()">
+          <i data-lucide="download" style="width: 14px; height: 14px;"></i> ส่งออกรายงาน
+        </button>
+      </div>
+    </header>
+
+    <!-- Global Interactive Filter Bar -->
+    <section class="filter-bar">
+      <div class="filter-label">
+        <i data-lucide="sliders-horizontal" style="width: 14px; height: 14px;"></i> ตัวกรองข้อมูล:
+      </div>
+
+      <select class="filter-select" id="filterCourier" onchange="applyGlobalFilters()">
+        <option value="">ทุกบริษัทขนส่ง (ทั้งหมด)</option>
+      </select>
+
+      <select class="filter-select" id="filterStatus" onchange="applyGlobalFilters()">
+        <option value="">ทุกสถานะพัสดุ</option>
+      </select>
+
+      <select class="filter-select" id="filterRegion" onchange="applyGlobalFilters()">
+        <option value="">ทุกภูมิภาค</option>
+      </select>
+
+      <select class="filter-select" id="filterPayment" onchange="applyGlobalFilters()">
+        <option value="">ทุกวิธีชำระเงิน</option>
+      </select>
+
+      <div class="filter-search">
+        <i data-lucide="search" style="width: 14px; height: 14px;" class="filter-search-icon"></i>
+        <input type="text" id="globalSearchInput" placeholder="ค้นหารหัสพัสดุ / จังหวัด / ผู้รับ..." oninput="applyGlobalFilters()" />
+      </div>
+
+      <button class="btn btn-outline" style="padding: 6px 10px; font-size: 12px;" onclick="resetFilters()">
+        <i data-lucide="x" style="width: 13px; height: 13px;"></i> ล้างตัวกรอง
+      </button>
+    </section>
+
+    <!-- Hidden file input for uploading custom CSV -->
+    <input type="file" id="csvFileInput" class="hidden-file-input" accept=".csv" onchange="handleFileUpload(event)">
+
+    <!-- =========================================================
+         VIEW 1: DASHBOARD ภาพรวม (15 คะแนน)
+         ========================================================= -->
+    <section class="view-container active" id="view-overview">
+      
+      <!-- Notice Box for Business Transparency -->
+      <div class="banner-box banner-info">
+        <i data-lucide="info" style="width: 18px; height: 18px; flex-shrink: 0; margin-top: 2px;"></i>
+        <div>
+          <strong>เงื่อนไขการคำนวณ KPI ทางธุรกิจ:</strong>
+          ระบบประมวลผลคำนวณจากชุดข้อมูลต้นฉบับ โดยมีเกณฑ์การคัดแยกค่าที่ผิดปกติเพื่อไม่ให้ตัวเลขทางธุรกิจบิดเบือน (เช่น ยกเว้นค่าจัดส่งติดลบและ Outlier 750,000 บาท) โดยยังคงรักษาข้อมูลเดิมไว้ครบ 100%
+        </div>
+      </div>
+
+      <!-- 5 Required KPIs (ภารกิจที่ 1: Dashboard ภาพรวม) -->
+      <div class="kpi-grid">
+        <!-- KPI 1: จำนวนแถวทั้งหมด -->
+        <div class="kpi-card accent-blue">
+          <div class="kpi-top">
+            <span class="kpi-label">(1) จำนวนแถวทั้งหมด</span>
+            <div class="kpi-icon-wrap"><i data-lucide="layers" style="width: 18px; height: 18px;"></i></div>
+          </div>
+          <div class="kpi-val"><span id="kpiTotalRows">0</span><span class="kpi-unit">แถว</span></div>
+          <div class="kpi-scope">
+            <strong>ขอบเขต:</strong> นับจำนวนแถวข้อมูลทั้งหมดในไฟล์ CSV (ไม่รวม Header บรรทัดที่ 1)
+          </div>
+        </div>
+
+        <!-- KPI 2: จำนวนรหัสพัสดุไม่ซ้ำ -->
+        <div class="kpi-card accent-purple">
+          <div class="kpi-top">
+            <span class="kpi-label">(2) รหัสพัสดุไม่ซ้ำ (Unique)</span>
+            <div class="kpi-icon-wrap"><i data-lucide="fingerprint" style="width: 18px; height: 18px;"></i></div>
+          </div>
+          <div class="kpi-val"><span id="kpiUniquePkg">0</span><span class="kpi-unit">รหัส</span></div>
+          <div class="kpi-scope">
+            <strong>ขอบเขต:</strong> นับเฉพาะ Tracking ID ที่ไม่ซ้ำ (พบพัสดุซ้ำ 2 คู่: PKG-0018, PKG-0100)
+          </div>
+        </div>
+
+        <!-- KPI 3: จำนวนรายการสถานะส่งสำเร็จ -->
+        <div class="kpi-card accent-emerald">
+          <div class="kpi-top">
+            <span class="kpi-label">(3) รายการสถานะส่งสำเร็จ</span>
+            <div class="kpi-icon-wrap"><i data-lucide="check-circle-2" style="width: 18px; height: 18px;"></i></div>
+          </div>
+          <div class="kpi-val"><span id="kpiDeliveredCount">0</span><span class="kpi-unit">รายการ</span></div>
+          <div class="kpi-scope">
+            <strong>ขอบเขต:</strong> สถานะส่งสำเร็จมาตรฐาน <span id="kpiDeliveredDetail">(156 รายการ + คำพ้อง 2 รายการ)</span>
+          </div>
+        </div>
+
+        <!-- KPI 4: ค่าจัดส่งรวมที่นำมาคำนวณได้ตามเกณฑ์ -->
+        <div class="kpi-card accent-amber">
+          <div class="kpi-top">
+            <span class="kpi-label">(4) ค่าจัดส่งรวมที่คำนวณได้</span>
+            <div class="kpi-icon-wrap"><i data-lucide="banknote" style="width: 18px; height: 18px;"></i></div>
+          </div>
+          <div class="kpi-val"><span id="kpiValidShippingCost">0</span><span class="kpi-unit">บาท</span></div>
+          <div class="kpi-scope">
+            <strong>ขอบเขตเกณฑ์:</strong> ค่าจัดส่ง &gt; 0 และ &lt; 10,000 บาท (ตัดค่าลบ -120 และ Outlier 750,000)
+          </div>
+        </div>
+
+        <!-- KPI 5: ระยะเวลาจัดส่งเฉลี่ยของรายการที่มีค่าถูกต้อง -->
+        <div class="kpi-card accent-rose">
+          <div class="kpi-top">
+            <span class="kpi-label">(5) ระยะเวลาจัดส่งเฉลี่ย</span>
+            <div class="kpi-icon-wrap"><i data-lucide="clock" style="width: 18px; height: 18px;"></i></div>
+          </div>
+          <div class="kpi-val"><span id="kpiAvgDeliveryDays">0</span><span class="kpi-unit">วัน</span></div>
+          <div class="kpi-scope">
+            <strong>ขอบเขตเกณฑ์:</strong> พัสดุส่งสำเร็จที่มีระยะเวลา &gt; 0 และสมเหตุสมผล (ตัดค่าลบ -8, -5)
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Executive Summary Cards -->
+      <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 22px; margin-top: 10px;">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title"><i data-lucide="activity" style="width: 18px; height: 18px;"></i> ประสิทธิภาพและสถานะการจัดส่งโดยสังเขป</div>
+              <div class="card-sub">สัดส่วนและแนวโน้มการนำส่งพัสดุจากชุดข้อมูลจริง</div>
+            </div>
+            <button class="btn btn-outline" style="font-size: 12px; padding: 4px 10px;" onclick="switchView('charts')">
+              ดูกราฟเต็ม <i data-lucide="arrow-right" style="width: 14px; height: 14px;"></i>
+            </button>
+          </div>
+          <div style="height: 250px;">
+            <canvas id="overviewStatusChart"></canvas>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title"><i data-lucide="shield-check" style="width: 18px; height: 18px;"></i> ความน่าเชื่อถือของข้อมูล</div>
+              <div class="card-sub">สรุปผลการประเมินคุณภาพ (Data Quality Score)</div>
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 180px; text-align: center;">
+            <div style="font-family: var(--font-heading); font-size: 48px; font-weight: 800; color: #4338ca;" id="qualityScoreVal">81.5%</div>
+            <div style="font-size: 13px; font-weight: 600; color: var(--text-muted); margin-top: 4px;">แถวข้อมูลที่สมบูรณ์ตามเกณฑ์</div>
+            <div style="font-size: 12px; color: var(--text-light); margin-top: 6px;" id="cleanRowsSummaryText">163 แถวจากทั้งหมด 200 แถว ปราศจากข้อผิดพลาด</div>
+          </div>
+          <button class="btn btn-primary" style="width: 100%; font-size: 13px;" onclick="switchView('quality')">
+            <i data-lucide="search" style="width: 14px; height: 14px;"></i> ตรวจสอบรายละเอียดความผิดปกติ
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+         VIEW 2: กราฟวิเคราะห์ (20 คะแนน)
+         ========================================================= -->
+    <section class="view-container" id="view-charts">
+      
+      <!-- Notice on Courier Grouping as per requirement 2 -->
+      <div class="banner-box banner-warning">
+        <i data-lucide="sparkles" style="width: 18px; height: 18px; flex-shrink: 0; margin-top: 2px;"></i>
+        <div>
+          <strong>การจัดการชื่อที่สื่อความหมายเดียวกันตามเงื่อนไขข้อ 2:</strong>
+          คงข้อความเดิมใน CSV ไว้ทั้งหมด (ไม่แก้คำทับ) และสำหรับกราฟมีปุ่มสลับระหว่าง <strong>"ชื่อดั้งเดิมใน CSV"</strong> กับ <strong>"จัดกลุ่มมาตรฐาน (Grouped)"</strong> เช่น รวม <code>Flash Express / FLASH / flash express</code> หรือ <code>ไปรษณีย์ไทย / Thailand Post</code> เพื่อเปรียบเทียบเชิงวิเคราะห์
+        </div>
+      </div>
+
+      <div class="chart-grid">
+        <!-- Chart 1: จำนวนรายการแยกตามบริษัทขนส่ง -->
+        <div class="card chart-card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">1. จำนวนรายการแยกตามบริษัทขนส่ง</div>
+              <div class="card-sub">แกน X: บริษัทขนส่ง | แกน Y: จำนวนพัสดุ (รายการ)</div>
+            </div>
+            <div class="toggle-group">
+              <button class="toggle-btn active" id="btnCourierRaw" onclick="toggleCourierGrouping(false)">ตามชื่อเดิม</button>
+              <button class="toggle-btn" id="btnCourierGroup" onclick="toggleCourierGrouping(true)">จัดกลุ่มมาตรฐาน</button>
+            </div>
+          </div>
+          <div class="chart-body">
+            <canvas id="chartCourier"></canvas>
+          </div>
+        </div>
+
+        <!-- Chart 2: จำนวนรายการแยกตามสถานะพัสดุ -->
+        <div class="card chart-card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">2. จำนวนรายการแยกตามสถานะพัสดุ</div>
+              <div class="card-sub">สัดส่วนและจำนวนพัสดุในแต่ละสถานะ (รายการ)</div>
+            </div>
+            <div class="toggle-group">
+              <button class="toggle-btn active" id="btnStatusPie" onclick="setChartType('status', 'doughnut')">วงกลม</button>
+              <button class="toggle-btn" id="btnStatusBar" onclick="setChartType('status', 'bar')">แท่ง</button>
+            </div>
+          </div>
+          <div class="chart-body">
+            <canvas id="chartStatus"></canvas>
+          </div>
+        </div>
+
+        <!-- Chart 3: ค่าจัดส่งรวมแยกตามจังหวัดปลายทาง -->
+        <div class="card chart-card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">3. ค่าจัดส่งรวมแยกตามจังหวัดปลายทาง</div>
+              <div class="card-sub">แกน X: จังหวัด | แกน Y: ยอดเงินค่าจัดส่ง (บาท)</div>
+            </div>
+            <div class="toggle-group">
+              <button class="toggle-btn active" id="btnProvValid" onclick="toggleProvinceOutlier(true)">ตัดค่าผิดปกติ (Clean)</button>
+              <button class="toggle-btn" id="btnProvAll" onclick="toggleProvinceOutlier(false)">รวมค่าเดิมทั้งหมด</button>
+            </div>
+          </div>
+          <div class="chart-body">
+            <canvas id="chartProvince"></canvas>
+          </div>
+        </div>
+
+        <!-- Chart 4: แนวโน้มจำนวนพัสดุรายเดือน จากวันที่รับพัสดุ -->
+        <div class="card chart-card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">4. แนวโน้มจำนวนพัสดุรายเดือน จากวันที่รับพัสดุ</div>
+              <div class="card-sub">แกน X: เดือนที่รับพัสดุ (ปี 2026) | แกน Y: จำนวนพัสดุ (รายการ)</div>
+            </div>
+          </div>
+          <div class="chart-body">
+            <canvas id="chartMonthly"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+         VIEW 3: ระบบตรวจจับข้อมูลผิดปกติ (30 คะแนน) & สรุปคุณภาพ (10 คะแนน)
+         ========================================================= -->
+    <section class="view-container" id="view-quality">
+      
+      <!-- ภารกิจที่ 5: สรุปคุณภาพข้อมูล (10 คะแนน) -->
+      <div class="card-title" style="margin-bottom: 14px; font-size: 16px;">
+        <i data-lucide="check-square" style="width: 20px; height: 20px;"></i> ภารกิจที่ 5: สรุปคุณภาพข้อมูล (Data Quality Metrics)
+      </div>
+
+      <div class="dq-summary-grid">
+        <!-- จุดที่ 1: จำนวนแถวที่มีคำเตือนอย่างน้อย 1 จุด -->
+        <div class="dq-stat-card">
+          <div class="dq-stat-icon red"><i data-lucide="alert-octagon"></i></div>
+          <div>
+            <div class="dq-stat-val" id="dqAtLeastOne">0</div>
+            <div class="dq-stat-lbl">แถวที่มีคำเตือนอย่างน้อย 1 จุด</div>
+            <div style="font-size: 11px; color: var(--text-light); margin-top: 2px;">(ทั้งผิดแน่นอน และควรตรวจสอบ)</div>
+          </div>
+        </div>
+
+        <!-- จุดที่ 2: จำนวนแถวที่มีปัญหามากกว่า 1 จุด -->
+        <div class="dq-stat-card">
+          <div class="dq-stat-icon amber"><i data-lucide="layers"></i></div>
+          <div>
+            <div class="dq-stat-val" id="dqMoreThanOne">0</div>
+            <div class="dq-stat-lbl">แถวที่มีปัญหามากกว่า 1 จุด</div>
+            <div style="font-size: 11px; color: var(--text-light); margin-top: 2px;">(พบความผิดปกติหลายคอลัมน์ในแถวเดียว)</div>
+          </div>
+        </div>
+
+        <!-- จุดที่ 3: จำนวนแถวที่ไม่พบปัญหาตามกฎที่ระบบตรวจสอบ -->
+        <div class="dq-stat-card">
+          <div class="dq-stat-icon green"><i data-lucide="check-check"></i></div>
+          <div>
+            <div class="dq-stat-val" id="dqCleanRows">0</div>
+            <div class="dq-stat-lbl">แถวที่ไม่พบปัญหาตามกฎ</div>
+            <div style="font-size: 11px; color: var(--text-light); margin-top: 2px;">(ข้อมูลถูกต้องครบถ้วนสมบูรณ์)</div>
+          </div>
+        </div>
+
+        <!-- จุดที่ 4: รวมปัญหาทั้งหมดที่ตรวจพบ -->
+        <div class="dq-stat-card">
+          <div class="dq-stat-icon blue"><i data-lucide="list-checks"></i></div>
+          <div>
+            <div class="dq-stat-val" id="dqTotalIssues">0</div>
+            <div class="dq-stat-lbl">จำนวนปัญหาทั้งหมด (รวมทุกจุด)</div>
+            <div style="font-size: 11px; color: var(--text-light); margin-top: 2px;">(1 แถวตรวจพบได้หลายปัญหา)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ภารกิจที่ 3: ระบบตรวจจับข้อมูลผิดปกติ 5 ประเภท (30 คะแนน) -->
+      <div class="card-title" style="margin: 24px 0 14px; font-size: 16px;">
+        <i data-lucide="shield-check" style="width: 20px; height: 20px;"></i> ภารกิจที่ 3: ผลการตรวจสอบ 5 ประเภทความผิดปกติ
+      </div>
+
+      <div class="category-cards">
+        <!-- 1. Missing Values -->
+        <div class="cat-box">
+          <div class="cat-head">
+            <span class="cat-name"><i data-lucide="file-question" style="width: 16px; height: 16px; display: inline;"></i> 1. Missing Values (ค่าว่าง)</span>
+            <span class="cat-count" id="countMissing">0 จุด</span>
+          </div>
+          <div class="cat-desc">
+            ตรวจพบน้ำหนักว่าง, ระยะทางว่าง, ค่าจัดส่งว่าง, จังหวัดว่าง หรือบริษัทขนส่งว่าง พร้อมจำแนกบริบท เช่น ยังไม่ส่งสำเร็จจึงไม่มีวันที่จัดส่งสำเร็จ (จัดเป็นค่าว่างสมเหตุสมผล)
+          </div>
+          <button class="btn btn-outline" style="font-size: 12px; margin-top: 6px;" onclick="filterTableByType('Missing Values')">
+            ดูรายการในตาราง &rarr;
+          </button>
+        </div>
+
+        <!-- 2. Outliers -->
+        <div class="cat-box">
+          <div class="cat-head">
+            <span class="cat-name"><i data-lucide="trending-up" style="width: 16px; height: 16px; display: inline;"></i> 2. Outliers (ค่าผิดปกติ)</span>
+            <span class="cat-count" id="countOutliers">0 จุด</span>
+          </div>
+          <div class="cat-desc">
+            แยก <strong>"ค่าสูงน่าสงสัย"</strong> (น้ำหนัก 850 กก., มูลค่า 12 ล้าน, ระยะทาง 99,999 กม.) ออกจาก <strong>"ค่าที่ใช้ไม่ได้"</strong> (น้ำหนัก -3 กก., ค่าจัดส่ง -120 บาท, ค่าจัดส่ง 750,000 บาท)
+          </div>
+          <button class="btn btn-outline" style="font-size: 12px; margin-top: 6px;" onclick="filterTableByType('Outliers')">
+            ดูรายการในตาราง &rarr;
+          </button>
+        </div>
+
+        <!-- 3. Invalid Data -->
+        <div class="cat-box">
+          <div class="cat-head">
+            <span class="cat-name"><i data-lucide="calendar-x" style="width: 16px; height: 16px; display: inline;"></i> 3. Invalid Data (ข้อมูลไม่ถูกต้อง)</span>
+            <span class="cat-count" id="countInvalid">0 จุด</span>
+          </div>
+          <div class="cat-desc">
+            วันที่ไม่มีอยู่จริง (2026-02-30, 31/13/2026, 'not_a_date'), วันส่งสำเร็จก่อนวันรับ, คะแนนพึงพอใจเกิน 5, จัดส่ง 0 ครั้ง, ตัวเลขมีตัวอักษร ('หนักมาก', '฿2,900')
+          </div>
+          <button class="btn btn-outline" style="font-size: 12px; margin-top: 6px;" onclick="filterTableByType('Invalid Data')">
+            ดูรายการในตาราง &rarr;
+          </button>
+        </div>
+
+        <!-- 4. Duplicates -->
+        <div class="cat-box">
+          <div class="cat-head">
+            <span class="cat-name"><i data-lucide="copy" style="width: 16px; height: 16px; display: inline;"></i> 4. Duplicates (ข้อมูลซ้ำซ้อน)</span>
+            <span class="cat-count" id="countDuplicates">0 จุด</span>
+          </div>
+          <div class="cat-desc">
+            ตรวจพบรหัสพัสดุซ้ำ เช่น <code>PKG-0018</code> (แถว 19, 192) และ <code>PKG-0100</code> (แถว 101, 201) โดยแสดงจำนวนและตำแหน่งแถวอย่างชัดเจนและไม่ลบรายการใด
+          </div>
+          <button class="btn btn-outline" style="font-size: 12px; margin-top: 6px;" onclick="filterTableByType('Duplicates')">
+            ดูรายการในตาราง &rarr;
+          </button>
+        </div>
+
+        <!-- 5. Inconsistent Data -->
+        <div class="cat-box">
+          <div class="cat-head">
+            <span class="cat-name"><i data-lucide="git-commit" style="width: 16px; height: 16px; display: inline;"></i> 5. Inconsistent Data (ขัดแย้งกัน)</span>
+            <span class="cat-count" id="countInconsistent">0 จุด</span>
+          </div>
+          <div class="cat-desc">
+            สถานะส่งสำเร็จแต่ไม่มีวันที่สำเร็จ, กำลังจัดส่งแต่มีวันที่ส่งสำเร็จ, ระยะเวลาจัดส่งติดลบขัดกับวันที่, หรือจังหวัดไม่สอดคล้องกับภูมิภาค (เช่น กทม. ภาคอีสาน)
+          </div>
+          <button class="btn btn-outline" style="font-size: 12px; margin-top: 6px;" onclick="filterTableByType('Inconsistent Data')">
+            ดูรายการในตาราง &rarr;
+          </button>
+        </div>
+      </div>
+
+      <div style="text-align: center; margin-top: 10px;">
+        <button class="btn btn-primary" onclick="switchView('errors')">
+          <i data-lucide="table" style="width: 16px; height: 16px;"></i> เปิดดูตารางรายงานข้อผิดพลาดทั้งหมด (ภารกิจที่ 4)
+        </button>
+      </div>
+    </section>
+
+    <!-- =========================================================
+         VIEW 4: ตารางรายงานข้อผิดพลาด (15 คะแนน)
+         ========================================================= -->
+    <section class="view-container" id="view-errors">
+      
+      <div class="table-container">
+        <!-- Table Control Toolbar -->
+        <div class="table-toolbar">
+          <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <div class="filter-search" style="min-width: 240px;">
+              <i data-lucide="search" style="width: 14px; height: 14px;" class="filter-search-icon"></i>
+              <input type="text" id="errorSearchInput" placeholder="ค้นหารหัสพัสดุ / แถว / คอลัมน์..." oninput="renderErrorTable()" />
+            </div>
+
+            <select class="filter-select" id="errorTypeFilter" onchange="renderErrorTable()">
+              <option value="">ทุกประเภทความผิดปกติ (ทั้งหมด)</option>
+              <option value="Missing Values">Missing Values</option>
+              <option value="Outliers">Outliers</option>
+              <option value="Invalid Data">Invalid Data</option>
+              <option value="Duplicates">Duplicates</option>
+              <option value="Inconsistent Data">Inconsistent Data</option>
+            </select>
+
+            <select class="filter-select" id="errorSeverityFilter" onchange="renderErrorTable()">
+              <option value="">ทุกระดับการแจ้งเตือน</option>
+              <option value="ผิดแน่นอน">ผิดแน่นอน (Critical)</option>
+              <option value="ควรตรวจสอบ">ควรตรวจสอบ (Warning)</option>
+              <option value="ค่าว่างที่อาจสมเหตุสมผล">ค่าว่างที่อาจสมเหตุสมผล (Contextual Empty)</option>
+            </select>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <span style="font-size: 12.5px; color: var(--text-sub);">
+              แสดง <strong id="errorTableShowingCount">0</strong> รายการ
+            </span>
+            <button class="btn btn-secondary" onclick="exportErrorReportCsv()">
+              <i data-lucide="file-spreadsheets" style="width: 14px; height: 14px;"></i> ส่งออกเป็น CSV
+            </button>
+          </div>
+        </div>
+
+        <!-- Error Report Data Table -->
+        <div class="data-table-wrap">
+          <table class="data-table" id="errorReportTable">
+            <thead>
+              <tr>
+                <th style="width: 70px;">แถวใน CSV</th>
+                <th style="width: 110px;">รหัสพัสดุ</th>
+                <th style="width: 140px;">ชื่อคอลัมน์</th>
+                <th style="width: 120px;">ค่าเดิมในไฟล์</th>
+                <th style="width: 140px;">ประเภทความผิดปกติ</th>
+                <th>คำอธิบายสาเหตุ & บริบท</th>
+                <th style="width: 130px;">ระดับการแจ้งเตือน</th>
+              </tr>
+            </thead>
+            <tbody id="errorTableBody">
+              <!-- Rendered dynamically by JavaScript -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+         VIEW 5: ข้อมูลดิบต้นฉบับ & CSV INSPECTOR
+         ========================================================= -->
+    <section class="view-container" id="view-raw">
+      
+      <div class="banner-box banner-info">
+        <i data-lucide="shield" style="width: 18px; height: 18px; flex-shrink: 0; margin-top: 2px;"></i>
+        <div>
+          <strong>การคงข้อมูลต้นฉบับตามเงื่อนไขข้อ 1:</strong>
+          แถวด้านล่างนี้แสดงข้อมูลดิบจากไฟล์ <code>delivery_logistics_dirty_200.csv</code> 100% โดยไม่มีการลบแถวหรือเขียนทับค่า เซลล์ที่มีเครื่องหมายไฮไลท์สีแดง/ส้ม คือจุดที่ระบบตรวจจับพบข้อผิดพลาด
+        </div>
+      </div>
+
+      <div class="table-container">
+        <div class="table-toolbar">
+          <div class="raw-table-meta">
+            <span>จำนวนแถวทั้งหมด: <strong id="rawRowCountText">200</strong> แถว</span>
+            <span>•</span>
+            <span>คอลัมน์: <strong>19</strong> คอลัมน์</span>
+            <span>•</span>
+            <span style="color: var(--error-text);"><i data-lucide="square" style="width: 10px; height: 10px; display: inline-block; background: rgba(220, 38, 38, 0.15); border: 1px solid var(--error-border);"></i> ไฮไลท์แดง: ผิดแน่นอน</span>
+            <span style="color: var(--warning-text);"><i data-lucide="square" style="width: 10px; height: 10px; display: inline-block; background: rgba(217, 119, 6, 0.15); border: 1px solid var(--warning-border);"></i> ไฮไลท์ส้ม: ควรตรวจสอบ</span>
+          </div>
+
+          <div class="filter-search" style="max-width: 280px;">
+            <i data-lucide="search" style="width: 14px; height: 14px;" class="filter-search-icon"></i>
+            <input type="text" id="rawSearchInput" placeholder="ค้นหาในตารางต้นฉบับ..." oninput="renderRawTable()" />
+          </div>
+        </div>
+
+        <div class="data-table-wrap" style="max-height: 600px;">
+          <table class="data-table" id="rawCsvTable">
+            <thead id="rawTableHeader">
+              <!-- Dynamically rendered -->
+            </thead>
+            <tbody id="rawTableBody">
+              <!-- Dynamically rendered -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+         VIEW 6: หลักเกณฑ์ & ผลกระทบต่อ KPI (BUSINESS IMPACT)
+         ========================================================= -->
+    <section class="view-container" id="view-impact">
+      
+      <div class="card" style="margin-bottom: 24px;">
+        <div class="card-header">
+          <div>
+            <div class="card-title"><i data-lucide="scale" style="width: 20px; height: 20px;"></i> การกระทบยอด: ข้อมูลดิบก่อนกรอง (Raw Dirty) vs ข้อมูลตามเกณฑ์ (Cleaned KPI)</div>
+            <div class="card-sub">ตอบข้อกำหนดสำคัญ: "ผู้แข่งขันต้องชี้ให้เห็นว่าค่าที่ผิดส่งผลต่อ KPI หรือกราฟอย่างไร"</div>
+          </div>
+        </div>
+
+        <div class="impact-compare-grid">
+          <!-- Side 1: Raw Dirty Data without Rules -->
+          <div class="impact-card raw-side">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+              <h3 style="color: var(--error-text); font-size: 16px;">❌ หากใช้ข้อมูลดิบโดยไม่ตรวจสอบ (Unfiltered)</h3>
+              <span class="badge badge-error">อันตรายต่อการตัดสินใจ</span>
+            </div>
+
+            <div class="impact-metric-row">
+              <span style="color: var(--text-muted);">ค่าจัดส่งรวมทั้งหมด:</span>
+              <div class="impact-val" style="color: var(--error-text);" id="impactRawShipping">792,512.16 บาท</div>
+            </div>
+            <div style="font-size: 11.5px; color: var(--error-text); margin-bottom: 10px;">
+              * เกิดจากค่าจัดส่งผิดปกติแถวที่ 81 (PKG-0080) จำนวน 750,000 บาท และมีค่าติดลบ -120 บาท
+            </div>
+
+            <div class="impact-metric-row">
+              <span style="color: var(--text-muted);">ระยะเวลาจัดส่งเฉลี่ย:</span>
+              <div class="impact-val" style="color: var(--error-text);" id="impactRawDays">4.80 วัน</div>
+            </div>
+            <div style="font-size: 11.5px; color: var(--error-text); margin-bottom: 10px;">
+              * ตัวเลขถูกดึงลงเพราะมีค่าติดลบ -8 วัน (PKG-0151) และ -5 วัน (PKG-0166)
+            </div>
+
+            <div class="impact-metric-row">
+              <span style="color: var(--text-muted);">สถานะพัสดุ:</span>
+              <div class="impact-val">นับตกหล่น 2 รายการ</div>
+            </div>
+            <div style="font-size: 11.5px; color: var(--text-sub);">
+              * มีสถานะ "สำเร็จ" และ "Delivered" ที่ไม่ตรงกับคำมาตรฐาน ทำให้สถิติส่งสำเร็จหายไปหาก filter ไม่ดี
+            </div>
+          </div>
+
+          <!-- Side 2: Cleaned Data with Valid Criteria -->
+          <div class="impact-card clean-side">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+              <h3 style="color: var(--success-text); font-size: 16px;">✅ ข้อมูลที่ผ่านเกณฑ์นำเข้าที่ถูกต้อง (Cleaned Criteria)</h3>
+              <span class="badge badge-info">ความน่าเชื่อถือสูง</span>
+            </div>
+
+            <div class="impact-metric-row">
+              <span style="color: var(--text-muted);">ค่าจัดส่งรวมที่ถูกต้อง:</span>
+              <div class="impact-val" style="color: var(--success-text);" id="impactCleanShipping">42,632.16 บาท</div>
+            </div>
+            <div style="font-size: 11.5px; color: var(--success-text); margin-bottom: 10px;">
+              * สะท้อนยอดต้นทุนค่าจัดส่งจริงของ 197 รายการที่ถูกต้องสมเหตุสมผล
+            </div>
+
+            <div class="impact-metric-row">
+              <span style="color: var(--text-muted);">ระยะเวลาจัดส่งเฉลี่ยที่แท้จริง:</span>
+              <div class="impact-val" style="color: var(--success-text);" id="impactCleanDays">4.91 วัน</div>
+            </div>
+            <div style="font-size: 11.5px; color: var(--success-text); margin-bottom: 10px;">
+              * คำนวณจาก 154 รายการที่ส่งสำเร็จจริงและมีระยะเวลาเป็นบวกถูกต้อง
+            </div>
+
+            <div class="impact-metric-row">
+              <span style="color: var(--text-muted);">การจัดกลุ่มบริษัทขนส่ง:</span>
+              <div class="impact-val">จัดกลุ่ม 5 ค่ายหลัก</div>
+            </div>
+            <div style="font-size: 11.5px; color: var(--text-sub);">
+              * รวม Kerry Express/kerry และ Flash/FLASH/flash express ทำให้เห็น Market Share ชัดเจน
+            </div>
+          </div>
+        </div>
+
+        <!-- Documentation Table on Rules & Exclusion Criteria -->
+        <h3 style="margin: 20px 0 12px; font-size: 15px;">สรุปเกณฑ์การนำเข้าหรือยกเว้นค่าในการคำนวณ (Business Rulebook)</h3>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ตัวชี้วัด / คอลัมน์</th>
+              <th>เกณฑ์การนำเข้า (Inclusion Criteria)</th>
+              <th>เกณฑ์การยกเว้น (Exclusion Criteria)</th>
+              <th>ผลกระทบหากไม่คัดกรอง</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>ค่าจัดส่งรวม (บาท)</strong></td>
+              <td>ค่าเป็นตัวเลขบวก และมีมูลค่าสมเหตุสมผล (&gt; 0 และ &lt; 10,000 บาท)</td>
+              <td>ยกเว้นค่าจัดส่งติดลบ (-120), ค่าว่าง, และ Outlier มหาศาล (750,000)</td>
+              <td>ยอดเงินสูงเกินจริงกว่า 1,800% ทำให้งบประมาณและการตัดสินใจทางการเงินล้มเหลว</td>
+            </tr>
+            <tr>
+              <td><strong>ระยะเวลาจัดส่งเฉลี่ย (วัน)</strong></td>
+              <td>สถานะส่งสำเร็จ และระยะเวลาเป็นจำนวนเต็มบวก 1-30 วัน</td>
+              <td>ยกเว้นค่าระยะเวลาติดลบ (-8, -5) และวันที่ส่งสำเร็จก่อนวันที่รับ</td>
+              <td>ค่าเฉลี่ยต่ำกว่าความเป็นจริง รายงานประสิทธิภาพขนส่งดีเกินจริง (Overestimating performance)</td>
+            </tr>
+            <tr>
+              <td><strong>จำนวนสถานะส่งสำเร็จ</strong></td>
+              <td>สถานะ "ส่งสำเร็จ" รวมทั้งคำพ้องความหมาย "สำเร็จ" และ "Delivered"</td>
+              <td>ยกเว้นกรณีสถานะส่งสำเร็จแต่วันที่สำเร็จเป็นค่าว่าง (ต้องระบุในรายงานข้อผิดพลาด)</td>
+              <td>หากนับเฉพาะคำตรงตัว จะพลาดออเดอร์ที่จัดส่งสำเร็จจริงไป 2 ออเดอร์</td>
+            </tr>
+            <tr>
+              <td><strong>จำนวนรหัสพัสดุไม่ซ้ำ</strong></td>
+              <td>รหัสพัสดุที่ไม่ซ้ำกัน (Distinct PKG IDs)</td>
+              <td>ไม่นับรหัสที่ปรากฏซ้ำเป็นครั้งที่ 2 (แต่คงแถวไว้ในระบบเพื่อตรวจสอบ)</td>
+              <td>จำนวนพัสดุเกินจากสต็อกจริง 2 ชิ้น (PKG-0018, PKG-0100)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- =========================================================
+       JAVASCRIPT LOGIC (Data Audit Engine & Interactive Visuals)
+       ========================================================= -->
+  <script>
+    // Global App State
+    let rawDataRows = [];
+    let rawHeaders = [];
+    let activeDataRows = []; // Filtered subset for dashboard/charts
+    let detectedAnomalies = [];
+    let chartInstances = {};
+    let currentView = 'overview';
+    let courierGroupMode = false;
+    let provinceCleanMode = true;
+    let statusChartType = 'doughnut';
+
+    // Standard province to region reference mapping
+    const PROVINCE_REGION_MAP = {
+      'กรุงเทพมหานคร': 'กลาง', 'นนทบุรี': 'กลาง',
+      'เชียงใหม่': 'เหนือ', 'เชียงราย': 'เหนือ',
+      'ขอนแก่น': 'อีสาน', 'นครราชสีมา': 'อีสาน', 'ชัยภูมิ': 'อีสาน', 'อุบลราชธานี': 'อีสาน',
+      'สุราษฎร์ธานี': 'ใต้', 'สงขลา': 'ใต้', 'ภูเก็ต': 'ใต้',
+      'ชลบุรี': 'ตะวันออก', 'ระยอง': 'ตะวันออก'
+    };
+
+    // Standard courier normalizer
+    function getNormalizedCourier(name) {
+      if (!name) return 'ไม่ระบุขนส่ง';
+      const n = name.trim().toLowerCase();
+      if (n.includes('kerry')) return 'Kerry Express';
+      if (n.includes('flash')) return 'Flash Express';
+      if (n.includes('thailand') || n.includes('ไปรษณีย์')) return 'Thailand Post (ไปรษณีย์ไทย)';
+      if (n.includes('j&t') || n.includes('j and t')) return 'J&T Express';
+      if (n.includes('best')) return 'Best Express';
+      return name.trim();
+    }
+
+    // Standard status normalizer
+    function getNormalizedStatus(st) {
+      if (!st) return 'ไม่ระบุสถานะ';
+      const s = st.trim();
+      if (s === 'ส่งสำเร็จ' || s === 'สำเร็จ' || s.toLowerCase() === 'delivered') return 'ส่งสำเร็จ';
+      return s;
+    }
+
+    // Initialize App on DOM Ready
+    document.addEventListener('DOMContentLoaded', async () => {
+      lucide.createIcons();
+      setupSidebarToggle();
+      await loadInitialCsv();
+    });
+
+    // Sidebar Toggle Setup
+    function setupSidebarToggle() {
+      const toggleBtn = document.getElementById('sidebarCollapseToggle');
+      const sidebar = document.getElementById('sidebar');
+      const collapseIcon = document.getElementById('collapseIcon');
+
+      toggleBtn.addEventListener('click', () => {
+        sidebar.classList.toggle('collapsed');
+        const isCollapsed = sidebar.classList.contains('collapsed');
+        collapseIcon.setAttribute('data-lucide', isCollapsed ? 'chevron-right' : 'chevron-left');
+        lucide.createIcons();
+        // Resize charts to fit new width
+        setTimeout(() => {
+          Object.values(chartInstances).forEach(c => c && c.resize());
+        }, 300);
+      });
+    }
+
+    // View Switching Logic (Page Switching Instead of Scrolling)
+    function switchView(viewId) {
+      currentView = viewId;
+
+      // Update Nav active states
+      document.querySelectorAll('.nav-item').forEach(el => {
+        el.classList.toggle('active', el.dataset.view === viewId);
+      });
+
+      // Update View Containers
+      document.querySelectorAll('.view-container').forEach(el => {
+        el.classList.remove('active');
+      });
+
+      const targetView = document.getElementById(`view-${viewId}`);
+      if (targetView) {
+        targetView.classList.add('active');
+      }
+
+      // Update Breadcrumb & Title
+      const titleMap = {
+        'overview': { cat: 'ภารกิจที่ 1', title: 'Dashboard ภาพรวม & ตัวชี้วัดหลัก (KPIs)' },
+        'charts': { cat: 'ภารกิจที่ 2', title: 'กราฟวิเคราะห์การจัดส่ง (4 กราฟหลัก)' },
+        'quality': { cat: 'ภารกิจที่ 3 & 5', title: 'ระบบตรวจจับข้อมูลผิดปกติ & สรุปคุณภาพข้อมูล' },
+        'errors': { cat: 'ภารกิจที่ 4', title: 'ตารางรายงานข้อผิดพลาด (Error Report Table)' },
+        'raw': { cat: 'ชุดข้อมูลต้นฉบับ', title: 'ตารางข้อมูลต้นฉบับ (Raw Dataset Inspector)' },
+        'impact': { cat: 'การกระทบยอด', title: 'ผลกระทบต่อ KPI & การเปรียบเทียบเชิงธุรกิจ' }
+      };
+
+      if (titleMap[viewId]) {
+        document.getElementById('breadcrumbCategory').textContent = titleMap[viewId].cat;
+        document.getElementById('viewTitle').textContent = titleMap[viewId].title;
+      }
+
+      // Scroll to top of main area
+      window.scrollTo({ top: 0, behavior: 'instant' });
+
+      // Render view-specific elements if needed
+      if (viewId === 'charts') {
+        renderAllCharts();
+      } else if (viewId === 'errors') {
+        renderErrorTable();
+      } else if (viewId === 'raw') {
+        renderRawTable();
+      }
+
+      lucide.createIcons();
+    }
+
+    // Embedded default CSV for offline / file:// protocol compatibility
+    const EMBEDDED_DEFAULT_CSV = `รหัสพัสดุ,วันที่รับพัสดุ,วันที่จัดส่งสำเร็จ,บริษัทขนส่ง,จังหวัดปลายทาง,ภูมิภาค,ประเภทสินค้า,น้ำหนัก_กก,ระยะทาง_กม,ค่าจัดส่ง_บาท,ค่าบริการเก็บเงินปลายทาง_บาท,มูลค่าสินค้า_บาท,วิธีชำระเงิน,สถานะพัสดุ,ระยะเวลาจัดส่ง_วัน,คะแนนความพึงพอใจ,จำนวนครั้งที่จัดส่ง,ช่องทางสั่งซื้อ,เหตุผลที่จัดส่งไม่สำเร็จ
+PKG-0001,2026-03-07,2026-03-10,Kerry Express,สุราษฎร์ธานี,ใต้,อุปกรณ์กีฬา,17.85,1250,332.34,0,3899.54,บัตรเครดิต,ส่งสำเร็จ,3,5,2,TikTok Shop,
+PKG-0002,2026-03-29,2026-04-04,Kerry Express,กรุงเทพมหานคร,กลาง,อุปกรณ์กีฬา,15.69,1006,304.18,35,5142.58,เก็บเงินปลายทาง,ส่งสำเร็จ,6,2,3,Lazada,
+PKG-0003,2026-02-26,2026-03-05,Thailand Post,ชัยภูมิ,อีสาน,อุปกรณ์กีฬา,0.94,1069,222.93,35,5977.91,เก็บเงินปลายทาง,ส่งสำเร็จ,7,4,3,Shopee,
+PKG-0004,2026-03-07,2026-03-11,Best Express,ระยอง,ตะวันออก,อุปกรณ์ไอที,0.64,1263,244.73,0,6516.75,โอนเงิน,ส่งสำเร็จ,4,4,2,Lazada,
+PKG-0005,2026-01-22,2026-01-27,J&T Express,,ตะวันออก,หนังสือ,9.37,1392,332.39,0,3052.47,พร้อมเพย์,ส่งสำเร็จ,5,3,3,เว็บไซต์,
+PKG-0006,2026-04-14,2026-04-15,Thailand Post,นนทบุรี,กลาง,เครื่องสำอาง,16.37,306,171.48,0,4282.05,โอนเงิน,ส่งสำเร็จ,1,1,1,TikTok Shop,
+PKG-0007,2026-06-25,2026-06-26,Kerry Express,กรุงเทพมหานคร,กลาง,อุปกรณ์กีฬา,15.05,1021,290.02,15,8275.4,เก็บเงินปลายทาง,ส่งสำเร็จ,1,4,3,เว็บไซต์,
+PKG-0008,2026-01-06,2026-01-11,flash express,สงขลา,ใต้,เครื่องสำอาง,16.1,332,199.81,35,8625.74,เก็บเงินปลายทาง,ส่งสำเร็จ,5,4,2,Shopee,
+PKG-0009,2026-08-21,2026-08-25,Thailand Post,ขอนแก่น,อีสาน,เครื่องสำอาง,5.88,778,184.71,0,7543.95,โอนเงิน,ส่งสำเร็จ,4,5,3,Lazada,
+PKG-0010,2026-08-21,2026-08-25,Kerry Express,เชียงราย,เหนือ,เสื้อผ้า,9.51,760,232.98,0,6970.56,พร้อมเพย์,ส่งสำเร็จ,4,3,3,TikTok Shop,
+PKG-0011,2026-06-21,,J&T Express,อุบลราชธานี,อีสาน,เสื้อผ้า,850,1322,302.83,0,5405.84,โอนเงิน,ตีกลับ,,,2,เว็บไซต์,ปลายทางไม่อยู่
+PKG-0012,2026-09-15,2026-09-18,J&T Express,ชัยภูมิ,อีสาน,หนังสือ,5.7,753,185.71,35,2483.9,เก็บเงินปลายทาง,ส่งสำเร็จ,3,4,1,Facebook,
+PKG-0013,2026-05-10,2026-05-15,Best Express,ชลบุรี,ตะวันออก,เครื่องเขียน,13.32,932,255.43,0,5586.61,พร้อมเพย์,ส่งสำเร็จ,5,3,1,Facebook,
+PKG-0014,2026-05-13,2026-05-21,J&T Express,สุราษฎร์ธานี,ใต้,ของใช้ในบ้าน,14.69,877,263.55,0,5447.18,บัตรเครดิต,ส่งสำเร็จ,8,3,1,Facebook,
+PKG-0015,2026-04-20,2026-04-23,Thailand Post,ระยอง,ตะวันออก,อุปกรณ์ไอที,15.57,1208,327.99,0,7516.43,พร้อมเพย์,ส่งสำเร็จ,3,2,3,Shopee,
+PKG-0016,2026-03-03,2026-03-06,Best Express,ระยอง,ตะวันออก,เสื้อผ้า,8.45,227,130.95,0,1770.85,โอนเงิน,ส่งสำเร็จ,3,1,2,เว็บไซต์,
+PKG-0017,2026-08-31,2026-09-08,Kerry Express,กรุงเทพมหานคร,กลาง,หนังสือ,5.77,1243,260.46,0,6961.95,พร้อมเพย์,ส่งสำเร็จ,8,3,2,Lazada,
+PKG-0018,2026-04-13,2026-04-17,Best Express,สงขลา,ใต้,เครื่องเขียน,16.8,644,230.93,0,6222.51,บัตรเครดิต,ส่งสำเร็จ,4,5,1,TikTok Shop,
+PKG-0019,2026-04-21,2026-02-30,J&T Express,นครราชสีมา,อีสาน,เสื้อผ้า,8.09,1275,298.04,0,2423.49,บัตรเครดิต,ส่งสำเร็จ,8,2,1,TikTok Shop,
+PKG-0020,2026-02-16,2026-02-24,J&T Express,ภูเก็ต,ใต้,ของใช้ในบ้าน,4.33,63,76.34,25,7826.9,เก็บเงินปลายทาง,ส่งสำเร็จ,8,5,1,Lazada,
+PKG-0021,2026-04-26,,Best Express,กรุงเทพมหานคร,กลาง,อุปกรณ์ไอที,14.11,82,144.65,0,3027.05,พร้อมเพย์,ตีกลับ,,,1,Lazada,ที่อยู่ไม่ชัดเจน
+PKG-0022,2026-04-22,2026-04-30,FLASH,ขอนแก่น,อีสาน,อุปกรณ์ไอที,9.16,312,140.3,0,4606.92,พร้อมเพย์,ส่งสำเร็จ,8,5,2,เว็บไซต์,
+PKG-0023,2026-08-21,,Kerry Express,สงขลา,ใต้,เสื้อผ้า,1.52,981,215.56,0,5673.71,พร้อมเพย์,ตีกลับ,,,2,Shopee,ปลายทางไม่อยู่
+PKG-0024,2026-08-14,,Thailand Post,สุราษฎร์ธานี,ใต้,เครื่องเขียน,,65,64.81,0,2252.97,โอนเงิน,ตีกลับ,,,1,Lazada,ติดต่อผู้รับไม่ได้
+PKG-0025,2026-03-16,2026-03-19,Kerry Express,สงขลา,ใต้,ของใช้ในบ้าน,17.04,63,136.32,35,5823.11,เก็บเงินปลายทาง,ส่งสำเร็จ,3,1,1,เว็บไซต์,
+PKG-0026,2026-05-31,2026-06-07,J&T Express,ระยอง,ตะวันออก,อุปกรณ์กีฬา,8.63,1416,314.39,0,5034.7,พร้อมเพย์,ส่งสำเร็จ,7,1,1,Lazada,
+PKG-0027,2026-02-07,2026-02-09,Thailand Post,สุราษฎร์ธานี,ใต้,เครื่องเขียน,6.5,1210,269.35,0,508.6,บัตรเครดิต,ส่งสำเร็จ,2,2,2,TikTok Shop,
+PKG-0028,2026-02-27,2026-03-06,Thailand Post,กรุงเทพมหานคร,กลาง,อุปกรณ์กีฬา,-3,1359,291.5,0,1502.85,บัตรเครดิต,ส่งสำเร็จ,7,1,2,Lazada,
+PKG-0029,2026-06-12,2026-06-13,Kerry Express,ระยอง,ตะวันออก,อุปกรณ์กีฬา,5.42,279,108.24,0,5403.06,เก็บเงินปลายทาง,ส่งสำเร็จ,1,5,1,TikTok Shop,
+PKG-0030,2026-03-22,2026-03-29,J&T Express,ขอนแก่น,อีสาน,เครื่องเขียน,8.1,1315,309.19,35,2560.86,เก็บเงินปลายทาง,ส่งสำเร็จ,7,2,3,Facebook,
+PKG-0031,2026-04-29,2026-04-30,Best Express,ขอนแก่น,อีสาน,อาหารแห้ง,2.15,112,67.77,35,6821.8,เก็บเงินปลายทาง,ส่งสำเร็จ,1,4,2,เว็บไซต์,
+PKG-0032,2026-06-19,2026-06-25,Best Express,สงขลา,ใต้,เครื่องสำอาง,9.43,454,167.53,0,4398.25,บัตรเครดิต,ส่งสำเร็จ,6,4,1,Facebook,
+PKG-0033,2026-04-01,,Flash Express,กทม.,อีสาน,เครื่องเขียน,8.08,1447,314.63,0,1281.94,โอนเงิน,ตีกลับ,,,2,Shopee,ปลายทางไม่อยู่
+PKG-0034,2026-04-24,2026-04-25,Kerry Express,ชัยภูมิ,อีสาน,เสื้อผ้า,5.46,1177,272.24,15,5063.53,เก็บเงินปลายทาง,ส่งสำเร็จ,1,5,1,Shopee,
+PKG-0035,2026-09-22,2026-09-29,Best Express,เชียงราย,เหนือ,อาหารแห้ง,17.35,573,"1,250.00",0,1927.83,โอนเงิน,ส่งสำเร็จ,7,4,2,Shopee,
+PKG-0036,2026-09-16,2026-09-23,Best Express,นครราชสีมา,อีสาน,อุปกรณ์กีฬา,3.64,1026,222.97,0,1639.66,บัตรเครดิต,ส่งสำเร็จ,7,4,1,เว็บไซต์,
+PKG-0037,2026-02-04,2026-02-10,Kerry Express,นครราชสีมา,อีสาน,ของใช้ในบ้าน,9.99,386,148.11,25,8406.0,,ส่งสำเร็จ,6,2,3,TikTok Shop,
+PKG-0038,2026-05-03,2026-05-10,Best Express,ระยอง,ตะวันออก,หนังสือ,10.54,658,214.49,0,6058.72,พร้อมเพย์,ส่งสำเร็จ,7,2,1,TikTok Shop,
+PKG-0039,2026-09-10,2026-09-15,Flash Express,เชียงราย,เหนือ,อุปกรณ์กีฬา,4.89,1404,301.22,0,4825.28,โอนเงิน,ส่งสำเร็จ,5,2,1,เว็บไซต์,
+PKG-0040,2026-08-13,2026-08-20,Kerry Express,ชัยภูมิ,อีสาน,ของใช้ในบ้าน,14.46,409,182.68,25,5761.25,เก็บเงินปลายทาง,ส่งสำเร็จ,7,1,1,shopee,
+PKG-0041,2026-03-06,,Thailand Post,กรุงเทพมหานคร,กลาง,อุปกรณ์กีฬา,6.57,1098,249.48,35,3763.32,เก็บเงินปลายทาง,ตีกลับ,,,2,TikTok Shop,ติดต่อผู้รับไม่ได้
+PKG-0042,2026-03-23,2026-03-26,Flash Express,ขอนแก่น,อีสาน,ของใช้ในบ้าน,4.88,119,,0,2033.87,บัตรเครดิต,ส่งสำเร็จ,3,3,1,Lazada,
+PKG-0043,2026-01-03,,Kerry Express,นครราชสีมา,อีสาน,เครื่องสำอาง,14.38,711,230.41,0,4407.79,พร้อมเพย์,กำลังจัดส่ง,,,3,Lazada,
+PKG-0044,2026-07-11,,Thailand Post,เชียงใหม่,เหนือ,ของใช้ในบ้าน,6.32,634,172.09,0,2715.62,บัตรเครดิต,กำลังจัดส่ง,,,1,Lazada,
+PKG-0045,2026-09-21,2026-09-22,Kerry Express,อุบลราชธานี,อีสาน,ของใช้ในบ้าน,2.58,211,84.89,15,6202.13,เก็บเงินปลายทาง,ส่งสำเร็จ,1,5,3,TikTok Shop,
+PKG-0046,2026-08-06,,J&T Express,ภูเก็ต,ใต้,เสื้อผ้า,0.91,469,104.08,15,3966.56,เก็บเงินปลายทาง,สำเร็จ,,,2,Shopee,
+PKG-0047,2026-02-16,,Kerry Express,เชียงราย,เหนือ,เสื้อผ้า,4.98,787,206.24,0,2278.97,บัตรเครดิต,ตีกลับ,,,1,TikTok Shop,ปลายทางไม่อยู่
+PKG-0048,2026-07-08,2026-07-14,Kerry Express,เชียงราย,เหนือ,ของใช้ในบ้าน,4.45,671,172.56,0,5241.51,โอนเงิน,ส่งสำเร็จ,6,3,3,เว็บไซต์,
+PKG-0049,2026-04-24,2026-04-29,Flash Express,อุบลราชธานี,อีสาน,อุปกรณ์กีฬา,14.06,99999,154.1,25,2353.34,เก็บเงินปลายทาง,ส่งสำเร็จ,5,4,3,Shopee,
+PKG-0050,2026-05-16,2026-05-21,Kerry Express,ชัยภูมิ,อีสาน,อุปกรณ์ไอที,6.76,838,222.71,0,6586.58,พร้อมเพย์,ส่งสำเร็จ,5,4,3,เว็บไซต์,
+PKG-0051,2026-04-26,2026-04-28,Thailand Post,ระยอง,ตะวันออก,ของใช้ในบ้าน,15.88,342,173.72,0,3148.62,พร้อมเพย์,ส่งสำเร็จ,2,1,1,Shopee,
+PKG-0052,2026-07-03,2026-07-04,J&T Express,ระยอง,ตะวันออก,อุปกรณ์ไอที,2.6,1095,214.92,35,1138.17,เก็บเงินปลายทาง,ส่งสำเร็จ,1,2,2,TikTok Shop,
+PKG-0053,2026-08-06,,J&T Express,อุบลราชธานี,อีสาน,เครื่องสำอาง,0.78,1304,248.69,0,6734.23,พร้อมเพย์,กำลังจัดส่ง,,,2,TikTok Shop,
+PKG-0054,2026-07-25,2026-08-02,Kerry Express,เชียงราย,เหนือ,ของใช้ในบ้าน,4.37,418,134.1,0,3279.57,บัตรเครดิต,ส่งสำเร็จ,8,5,1,Lazada,
+PKG-0055,2026-07-10,,Flash Express,กรุงเทพมหานคร,กลาง,เสื้อผ้า,14.43,461,214.44,0,4632.4,พร้อมเพย์,จัดส่งไม่สำเร็จ,,,2,เว็บไซต์,ปลายทางไม่อยู่
+PKG-0056,2026-09-02,2026-09-04,ไปรษณีย์ไทย,นครราชสีมา,อีสาน,ของใช้ในบ้าน,17.55,310,194.15,0,4351.72,พร้อมเพย์,ส่งสำเร็จ,2,4,3,TikTok Shop,
+PKG-0057,2026-01-18,2026-01-22,J&T Express,นครราชสีมา,อีสาน,ของใช้ในบ้าน,6.67,916,229.24,0,3396.78,บัตรเครดิต,ส่งสำเร็จ,4,2,1,Lazada,
+PKG-0058,2026-04-28,2026-04-30,J&T Express,นครราชสีมา,อีสาน,เครื่องสำอาง,15.87,1260,328.77,15,1845.83,เก็บเงินปลายทาง,ส่งสำเร็จ,2,1,3,Lazada,
+PKG-0059,31/13/2026,2026-03-23,Thailand Post,ชลบุรี,ตะวันออก,อุปกรณ์กีฬา,15.22,706,252.05,35,2297.59,เก็บเงินปลายทาง,ส่งสำเร็จ,4,4,3,Shopee,
+PKG-0060,2026-08-12,,Kerry Express,ระยอง,ตะวันออก,หนังสือ,17.03,1036,317.48,0,5581.33,พร้อมเพย์,จัดส่งไม่สำเร็จ,,,1,เว็บไซต์,ติดต่อผู้รับไม่ได้
+PKG-0061,2026-03-24,2026-04-02,Thailand Post,ภูเก็ต,ใต้,เครื่องสำอาง,9.06,625,179.32,0,5960.76,พร้อมเพย์,ส่งสำเร็จ,9,1,2,เว็บไซต์,
+PKG-0062,2026-02-08,2026-02-12,Flash Express,ชลบุรี,ตะวันออก,เครื่องเขียน,17.91,708,254.4,0,614.15,พร้อมเพย์,ส่งสำเร็จ,4,3,1,Lazada,
+PKG-0063,2026-04-08,2026-04-10,Flash Express,ขอนแก่น,,เครื่องเขียน,5.92,404,148.07,0,6197.82,โอนเงิน,ส่งสำเร็จ,2,5,1,Lazada,
+PKG-0064,2026-01-18,2026-01-26,Kerry Express,กรุงเทพมหานคร,กลาง,ของใช้ในบ้าน,15.38,358,173.67,35,911.99,เก็บเงินปลายทาง,ส่งสำเร็จ,8,1,3,Shopee,
+PKG-0065,2026-02-16,,J&T Express,นครราชสีมา,อีสาน,เครื่องสำอาง,11.13,660,218.91,0,797.9,พร้อมเพย์,ตีกลับ,,,3,เว็บไซต์,ที่อยู่ไม่ชัดเจน
+PKG-0066,2026-04-25,2026-05-03,J&T Express,ชลบุรี,ตะวันออก,อาหารแห้ง,7.58,651,-120,25,1883.83,เก็บเงินปลายทาง,ส่งสำเร็จ,8,4,1,Lazada,
+PKG-0067,2026-02-13,2026-02-17,Kerry Express,ชัยภูมิ,อีสาน,ของใช้ในบ้าน,4.84,964,211.4,0,7682.25,บัตรเครดิต,ส่งสำเร็จ,4,2,1,TikTok Shop,
+PKG-0068,2026-02-12,,Flash Express,นครราชสีมา,อีสาน,ของใช้ในบ้าน,0.78,818,165.65,0,8850.68,บัตรเครดิต,ตีกลับ,,,2,Facebook,ปลายทางไม่อยู่
+PKG-0069,2026-07-21,2026-07-24,Flash Express,นนทบุรี,กลาง,เครื่องเขียน,16.81,266,175.73,35,4589.79,เก็บเงินปลายทาง,ส่งสำเร็จ,3,5,1,Shopee,
+PKG-0070,2026-04-26,2026-04-27,Thailand Post,ขอนแก่น,อีสาน,อาหารแห้ง,4.6,1013,219.32,0,433.35,พร้อมเพย์,ส่งสำเร็จ,1,4,3,เว็บไซต์,
+PKG-0071,2026-09-18,2026-09-27,Best Express,นครราชสีมา,อีสาน,อาหารแห้ง,12.89,162,140.58,15,2199.5,เก็บเงินปลายทาง,ส่งสำเร็จ,9,3,2,Shopee,
+PKG-0072,2026-07-19,2026-07-26,J&T Express,นนทบุรี,กลาง,อุปกรณ์กีฬา,6.5,938,238.92,0,6746.38,โอนเงิน,ส่งสำเร็จ,7,1,3,Shopee,
+PKG-0073,2026-07-04,2026-03-01,Best Express,เชียงราย,เหนือ,หนังสือ,3.82,444,126.2,0,2366.34,บัตรเครดิต,กำลังจัดส่ง,3,,1,Facebook,ปลายทางไม่อยู่
+PKG-0074,2026-08-22,2026-08-27,Thailand Post,ขอนแก่น,อีสาน,เครื่องสำอาง,0.44,490,130.17,25,7535.19,เก็บเงินปลายทาง,ส่งสำเร็จ,5,1,3,TikTok Shop,
+PKG-0075,2026-06-02,2026-06-07,J&T Express,เชียงราย,เหนือ,อุปกรณ์ไอที,1.99,28,51.43,0,7497.77,พร้อมเพย์,ส่งสำเร็จ,5,2,1,เว็บไซต์,
+PKG-0076,2026-08-24,,Best Express,ระยอง,ตะวันออก,เครื่องเขียน,14.99,1214,307.15,0,6025.15,บัตรเครดิต,จัดส่งไม่สำเร็จ,,,1,เว็บไซต์,ที่อยู่ไม่ชัดเจน
+PKG-0077,2026-04-21,2026-04-30,Kerry Express,เชียงราย,เหนือ,อาหารแห้ง,2.02,1098,214.58,15,1789.78,เก็บเงินปลายทาง,ส่งสำเร็จ,9,4,2,Shopee,
+PKG-0078,2026-01-07,2026-01-16,Flash Express,นครราชสีมา,อีสาน,ของใช้ในบ้าน,1.03,374,88.74,0,5853.26,บัตรเครดิต,ส่งสำเร็จ,9,2,2,Facebook,
+PKG-0079,2026-04-07,2026-04-11,Flash Express,นครราชสีมา,อีสาน,หนังสือ,8.73,667,191.95,0,3013.0,บัตรเครดิต,ส่งสำเร็จ,4,3,1,Lazada,
+PKG-0080,2026-08-25,2026-09-03,J&T Express,เชียงราย,เหนือ,อาหารแห้ง,12.75,1253,750000,15,2088.54,เก็บเงินปลายทาง,ส่งสำเร็จ,9,2,1,Shopee,
+PKG-0081,2026-03-28,,Best Express,ขอนแก่น,อีสาน,เครื่องสำอาง,0.26,581,125.8,0,7043.92,โอนเงิน,ตีกลับ,,,1,เว็บไซต์,ปลายทางไม่อยู่
+PKG-0082,2026-06-21,2026-06-28,Thailand Post,อุบลราชธานี,อีสาน,อาหารแห้ง,8.13,737,203.89,0,8833.83,โอนเงิน,ส่งสำเร็จ,7,3,,Facebook,
+PKG-0083,2026-06-25,2026-06-29,Thailand Post,อุบลราชธานี,อีสาน,หนังสือ,16.23,684,233.78,0,3252.42,บัตรเครดิต,ส่งสำเร็จ,4,5,3,เว็บไซต์,
+PKG-0084,2026-06-13,,Thailand Post,เชียงราย,เหนือ,หนังสือ,12.55,910,267.64,25,4507.28,เก็บเงินปลายทาง,จัดส่งไม่สำเร็จ,,,3,เว็บไซต์,ปลายทางไม่อยู่
+PKG-0085,2026-06-03,2026-06-12,J&T Express,สุราษฎร์ธานี,ใต้,เสื้อผ้า,16.08,784,246.0,25,8608.12,เก็บเงินปลายทาง,ส่งสำเร็จ,9,5,3,เว็บไซต์,
+PKG-0086,2026-05-31,2026-06-01,J&T Express,นครราชสีมา,อีสาน,เสื้อผ้า,10.42,600,182.14,35,3249.11,เก็บเงินปลายทาง,ส่งสำเร็จ,1,2,1,Facebook,
+PKG-0087,2026-05-24,2026-06-01,Kerry Express,ขอนแก่น,อีสาน,อุปกรณ์ไอที,9.49,83,113.71,35,8414.35,เก็บเงินปลายทาง,ส่งสำเร็จ,8,4,3,TikTok Shop,
+PKG-0088,,2026-06-23,J&T Express,เชียงราย,เหนือ,อุปกรณ์กีฬา,2.07,959,219.15,0,6484.47,บัตรเครดิต,ส่งสำเร็จ,1,4,2,TikTok Shop,
+PKG-0089,2026-04-30,2026-05-02,Flash Express,เชียงใหม่,เหนือ,เสื้อผ้า,6.81,1159,267.75,0,1552.13,โอนเงิน,ส่งสำเร็จ,2,2,1,เว็บไซต์,
+PKG-0090,2026-09-15,,Kerry Express,กรุงเทพมหานคร,กลาง,อุปกรณ์ไอที,5.0,651,161.17,0,5171.52,บัตรเครดิต,กำลังจัดส่ง,,,3,Facebook,
+PKG-0091,2026-03-13,2026-03-21,Best Express,นนทบุรี,กลาง,ของใช้ในบ้าน,7.63,59,90.38,0,912.73,บัตรเครดิต,ส่งสำเร็จ,8,2,2,Facebook,
+PKG-0092,2026-03-12,,Flash Express,อุบลราชธานี,อีสาน,หนังสือ,4.76,285,114.73,0,1947.94,บัตรเครดิต,จัดส่งไม่สำเร็จ,,,1,เว็บไซต์,ติดต่อผู้รับไม่ได้
+PKG-0093,2026-03-17,2026-03-20,J and T,อุบลราชธานี,อีสาน,ของใช้ในบ้าน,2.35,956,221.6,0,5440.65,พร้อมเพย์,ส่งสำเร็จ,3,5,3,Facebook,
+PKG-0094,2026-08-17,2026-08-18,Flash Express,เชียงใหม่ ,ตะวันออก,เสื้อผ้า,2.86,1341,262.54,25,7285.3,เก็บเงินปลายทาง,ส่งสำเร็จ,1,5,2,TikTok Shop,
+PKG-0095,2026-01-18,,Kerry Express,สงขลา,ใต้,ของใช้ในบ้าน,8.0,202,134.39,0,6091.59,บัตรเครดิต,กำลังจัดส่ง,,,3,Facebook,
+PKG-0096,2026-07-24,2026-07-25,Kerry Express,กรุงเทพมหานคร,กลาง,หนังสือ,17.25,1340,346.55,15,8132.88,เก็บเงินปลายทาง,ส่งสำเร็จ,1,5,3,เว็บไซต์,
+PKG-0097,2026-01-30,2026-02-02,Kerry Express,กรุงเทพมหานคร,กลาง,เครื่องเขียน,5.77,1225,267.9,35,4303.15,เก็บเงินปลายทาง,ส่งสำเร็จ,3,1,3,เว็บไซต์,
+PKG-0098,2026/04/15,2026-07-26,Best Express,นครราชสีมา,อีสาน,เครื่องเขียน,6.12,871,208.11,0,7744.14,บัตรเครดิต,ส่งสำเร็จ,9,4,2,Shopee,
+PKG-0099,2026-09-20,2026-09-28,J&T Express,นนทบุรี,กลาง,เครื่องเขียน,8.95,901,222.78,0,5034.57,บัตรเครดิต,ส่งสำเร็จ,8,3,1,Facebook,
+PKG-0100,2026-04-05,2026-04-13,Best Express,ระยอง,ตะวันออก,ของใช้ในบ้าน,3.97,1311,275.71,0,1165.02,บัตรเครดิต,ส่งสำเร็จ,8,1,1,TikTok Shop,
+PKG-0101,2026-02-27,2026-03-05,Flash Express,อุบลราชธานี,อีสาน,ของใช้ในบ้าน,9.83,78,99.28,0,6898.02,พร้อมเพย์,ส่งสำเร็จ,6,1,2,Shopee,
+PKG-0102,2026-02-16,2026-02-17,Kerry Express,อุบลราชธานี,อีสาน,ของใช้ในบ้าน,17.01,1109,323.32,25,2282.18,เก็บเงินปลายทาง,ส่งสำเร็จ,1,1,1,Lazada,
+PKG-0103,2026-06-08,2026-06-13,Kerry Express,ระยอง,ตะวันออก,อุปกรณ์กีฬา,8.93,995,258.43,0,3786.89,พร้อมเพย์,ส่งสำเร็จ,5,2,3,Facebook,
+PKG-0104,2026-08-02,2026-08-06,Thailand Post,ชลบุรี,ตะวันออก,เครื่องสำอาง,7.04,547,169.45,0,12000000,พร้อมเพย์,ส่งสำเร็จ,4,3,1,Shopee,
+PKG-0105,2026-06-21,,Flash Express,อุบลราชธานี,อีสาน,ของใช้ในบ้าน,11.29,751,224.63,0,4958.38,พร้อมเพย์,กำลังจัดส่ง,,,1,Lazada,
+PKG-0106,2026-01-12,2026-01-14,J&T Express,เชียงใหม่,เหนือ,ของใช้ในบ้าน,15.39,379,181.99,15,8817.73,เก็บเงินปลายทาง,ส่งสำเร็จ,2,5,3,Lazada,
+PKG-0107,2026-04-28,2026-04-30,Best Express,สุราษฎร์ธานี,ใต้,อุปกรณ์ไอที,16.05,1078,291.88,0,6192.69,พร้อมเพย์,ส่งสำเร็จ,2,4,1,Lazada,
+PKG-0108,2026-01-02,2026-01-11,Kerry Express,ชลบุรี,ตะวันออก,หนังสือ,3.32,204,85.97,25,2879.57,เก็บเงินปลายทาง,ส่งสำเร็จ,9,1,2,Shopee,
+PKG-0109,2026-01-15,2026-01-21,Thailand Post,ชัยภูมิ,อีสาน,อาหารแห้ง,15.91,812,262.53,0,2655.15,พร้อมเพย์,ส่งสำเร็จ,6,1,2,Facebook,
+PKG-0110,2026-04-17,2026-04-23,Thailand Post,กรุงเทพมหานคร,กลาง,ของใช้ในบ้าน,12.79,733,239.74,15,"฿2,900",เก็บเงินปลายทาง,ส่งสำเร็จ,6,5,3,Facebook,
+PKG-0111,2026-01-09,2026-01-14,J&T Express,สุราษฎร์ธานี,ใต้,อาหารแห้ง,12.4,370,158.89,0,5393.19,โอนเงิน,ส่งสำเร็จ,5,2,3,Facebook,
+PKG-0112,2026-06-15,2026-06-21,Flash Express,ชัยภูมิ,อีสาน,เครื่องสำอาง,9.4,285,144.26,0,1691.56,โอนเงิน,ส่งสำเร็จ,6,5,3,Facebook,
+PKG-0113,2026-03-08,2026-03-14,Thailand Post,สุราษฎร์ธานี,ใต้,หนังสือ,16.07,951,276.91,0,510.5,พร้อมเพย์,,6,3,2,Shopee,
+PKG-0114,2026-01-13,2026-01-15,Best Express,เชียงใหม่,เหนือ,เครื่องสำอาง,10.28,105,117.4,0,1793.63,พร้อมเพย์,ส่งสำเร็จ,2,3,2,เว็บไซต์,
+PKG-0115,2026-08-31,not_a_date,J&T Express,สงขลา,ใต้,เครื่องเขียน,12.11,41,119.24,0,1528.88,บัตรเครดิต,ส่งสำเร็จ,9,2,2,Lazada,
+PKG-0116,2026-01-24,,Flash Express,ชลบุรี,ตะวันออก,เครื่องสำอาง,14.3,367,195.71,15,8423.05,เก็บเงินปลายทาง,ตีกลับ,,,3,เว็บไซต์,ที่อยู่ไม่ชัดเจน
+PKG-0117,2026-06-13,2026-06-14,J&T Express,กรุงเทพมหานคร,กลาง,อุปกรณ์ไอที,12.54,127,129.64,35,7939.07,เก็บเงินปลายทาง,ส่งสำเร็จ,1,2,2,Lazada,
+PKG-0118,2026-07-04,2026-07-12,Kerry Express,กรุงเทพมหานคร,กลาง,เครื่องสำอาง,2.34,402,117.39,0,2295.56,โอนเงิน,ส่งสำเร็จ,8,3,1,เว็บไซต์,
+PKG-0119,2026-01-17,2026-01-24,Kerry Express,สงขลา,ใต้,อาหารแห้ง,15.24,264,160.68,0,933.13,โอนเงิน,Delivered,7,2,3,เว็บไซต์,
+PKG-0120,2026-07-27,,Flash Express,ชลบุรี,ตะวันออก,เสื้อผ้า,0.88,205,92.98,15,3761.43,เก็บเงินปลายทาง,จัดส่งไม่สำเร็จ,,,2,TikTok Shop,ปลายทางไม่อยู่
+PKG-0121,2026-01-17,2026-01-24,Thailand Post,เชียงใหม่,เหนือ,เสื้อผ้า,13.6,667,241.76,0,3992.26,พร้อมเพย์,ส่งสำเร็จ,7,1,1,Lazada,
+PKG-0122,2026-01-10,2026-01-13,Flash Express,กรุงเทพมหานคร,กลาง,เสื้อผ้า,5.67,1392,295.83,35,2661.98,เก็บเงินปลายทาง,ส่งสำเร็จ,3,4,2,Facebook,
+PKG-0123,2026-04-08,2026-04-11,Thailand Post,ภูเก็ต,ใต้,อุปกรณ์กีฬา,4.98,763,183.7,25,2989.06,เก็บเงินปลายทาง,ส่งสำเร็จ,3,3,1,Facebook,
+PKG-0124,2026-09-02,2026-09-03,Flash Express,สุราษฎร์ธานี,ใต้,เครื่องสำอาง,9.42,57,92.4,15,963.51,เก็บเงินปลายทาง,ส่งสำเร็จ,1,1,3,Shopee,
+PKG-0125,2026-05-05,,Thailand Post,ระยอง,ตะวันออก,เครื่องสำอาง,4.48,1025,243.73,0,371.83,บัตรเครดิต,ตีกลับ,,9,2,เว็บไซต์,ติดต่อผู้รับไม่ได้
+PKG-0126,2026-05-25,2026-05-29,Thailand Post,ขอนแก่น,อีสาน,เครื่องสำอาง,13.15,1229,307.04,0,3394.46,บัตรเครดิต,ส่งสำเร็จ,4,2,2,TikTok Shop,
+PKG-0127,2026-03-17,,Kerry Express,เชียงราย,เหนือ,ของใช้ในบ้าน,15.4,1415,358.56,35,5605.51,เก็บเงินปลายทาง,ตีกลับ,,,3,Shopee,ติดต่อผู้รับไม่ได้
+PKG-0128,2026-06-12,2026-06-16,Flash Express,ชลบุรี,ตะวันออก,อุปกรณ์กีฬา,2.44,723,164.55,0,496.14,บัตรเครดิต,ส่งสำเร็จ,4,5,3,เว็บไซต์,
+PKG-0129,2026-04-08,2026-04-17,Thailand Post,เชียงราย,เหนือ,เครื่องเขียน,1.53,1412,264.22,25,3009.71,เก็บเงินปลายทาง,ส่งสำเร็จ,9,1,1,Shopee,
+PKG-0130,2026-07-06,2026-07-12,Kerry Express,ชัยภูมิ,อีสาน,อุปกรณ์กีฬา,16.8,934,300.11,35,1762.91,เก็บเงินปลายทาง,ส่งสำเร็จ,6,2,3,Facebook,
+PKG-0131,2026-03-07,2026-03-09,Best Express,นครราชสีมา,อีสาน,เครื่องเขียน,17.96,192,167.42,15,,เก็บเงินปลายทาง,ส่งสำเร็จ,2,1,2,เว็บไซต์,
+PKG-0132,2026-03-02,2026-03-03,Flash Express,ขอนแก่น,อีสาน,อาหารแห้ง,17.56,892,288.16,0,4724.1,บัตรเครดิต,ส่งสำเร็จ,1,2,2,Facebook,
+PKG-0133,2026-03-12,2026-03-15,J&T Express,นครราชสีมา,อีสาน,อาหารแห้ง,16.72,545,226.75,0,735.6,โอนเงิน,ส่งสำเร็จ,3,2,1,TikTok Shop,
+PKG-0134,2026-03-05,2026-03-07,Kerry Express,ภูเก็ต,ใต้,เสื้อผ้า,14.17,701,240.76,0,6152.68,บัตรเครดิต,ส่งสำเร็จ,2,3,1,Facebook,
+PKG-0135,2026-09-16,2026-09-21,Best Express,ขอนแก่น,อีสาน,เครื่องสำอาง,8.69,489,162.29,0,8345.99,บัตรเครดิต,ส่งสำเร็จ,5,3,3,Shopee,
+PKG-0136,2026-02-01,2026-02-10,Kerry Express,ภูเก็ต,ใต้,อาหารแห้ง,9.11,649,185.42,45,326.05,พร้อมเพย์,ส่งสำเร็จ,9,2,1,Shopee,
+PKG-0137,2026-06-30,2026-07-06,Kerry Express,ชลบุรี,ตะวันออก,อุปกรณ์กีฬา,8.41,1381,293.96,0,7804.5,โอนเงิน,ส่งสำเร็จ,6,2,2,TikTok Shop,
+PKG-0138,2026-08-30,2026-09-03,J&T Express,สงขลา,ใต้,อุปกรณ์กีฬา,9.95,145,110.74,0,7566.69,โอนเงิน,ส่งสำเร็จ,4,3,1,TikTok Shop,
+PKG-0139,2026-06-10,,J&T Express,ภูเก็ต,ใต้,เครื่องเขียน,7.45,848,210.59,15,8512.71,เก็บเงินปลายทาง,กำลังจัดส่ง,,,3,Lazada,
+PKG-0140,2026-04-22,2026-04-28,Best Express,ระยอง,ตะวันออก,อุปกรณ์กีฬา,16.0,1156,320.61,15,8926.81,เก็บเงินปลายทาง,ส่งสำเร็จ,6,5,3,Lazada,
+PKG-0141,2026-07-03,2026-07-04,J&T Express,อุบลราชธานี,อีสาน,หนังสือ,7.33,458,146.09,0,366.49,พร้อมเพย์,ส่งสำเร็จ,1,4,0,Lazada,
+PKG-0142,2026-09-17,2026-09-20,J&T Express,ขอนแก่น,อีสาน,อุปกรณ์กีฬา,13.52,426,197.78,0,6917.3,บัตรเครดิต,ส่งสำเร็จ,3,3,3,Shopee,
+PKG-0143,2026-02-07,,J&T Express,เชียงราย,เหนือ,อาหารแห้ง,17.13,1334,368.75,0,1743.25,บัตรเครดิต,ตีกลับ,,,2,เว็บไซต์,ปลายทางไม่อยู่
+PKG-0144,2026-08-07,2026-08-08,Best Express,ชัยภูมิ,อีสาน,อุปกรณ์กีฬา,7.18,750,217.07,0,6680.56,บัตรเครดิต,ส่งสำเร็จ,1,4,3,Facebook,
+PKG-0145,2026-05-30,2026-05-31,Best Express,อุบลราชธานี,อีสาน,หนังสือ,5.81,1399,311.89,0,2414.17,โอนเงิน,ส่งสำเร็จ,1,5,3,Facebook,
+PKG-0146,2026-08-02,,Kerry Express,เชียงใหม่,เหนือ,หนังสือ,7.58,1211,262.68,25,373.91,เก็บเงินปลายทาง,ตีกลับ,,,1,เว็บไซต์,ที่อยู่ไม่ชัดเจน
+PKG-0147,2026-05-14,2026-05-22,J&T Express,ชัยภูมิ,อีสาน,อุปกรณ์ไอที,6.56,842,216.88,0,3812.99,โอนเงิน,ส่งสำเร็จ,8,1,3,TikTok Shop,
+PKG-0148,2026-09-10,2026-09-13,J&T Express,กรุงเทพมหานคร,กลาง,อุปกรณ์ไอที,17.27,1009,313.88,0,4069.43,โอนเงิน,ส่งสำเร็จ,3,1,1,Lazada,
+PKG-0149,2026-01-15,2026-01-24,kerry,กรุงเทพมหานคร,กลาง,อุปกรณ์กีฬา,15.15,551,210.37,0,4104.51,บัตรเครดิต,ส่งสำเร็จ,9,1,2,เว็บไซต์,
+PKG-0150,2026-06-01,,Kerry Express,เชียงใหม่,เหนือ,อาหารแห้ง,17.04,285,177.19,15,7818.93,เก็บเงินปลายทาง,ตีกลับ,,,3,Facebook,ติดต่อผู้รับไม่ได้
+PKG-0151,2026-09-28,2026-09-20,J&T Express,เชียงราย,เหนือ,อุปกรณ์ไอที,16.15,1174,306.97,0,3988.97,พร้อมเพย์,ส่งสำเร็จ,-8,3,3,Facebook,
+PKG-0152,2026-06-16,2026-06-19,Thailand Post,นครราชสีมา,อีสาน,เสื้อผ้า,14.28,761,238.7,0,5147.68,พร้อมเพย์,ส่งสำเร็จ,3,2,2,Lazada,
+PKG-0153,2026-07-19,2026-07-27,J&T Express,สงขลา,ใต้,ของใช้ในบ้าน,0.33,1310,243.3,0,2236.92,บัตรเครดิต,ส่งสำเร็จ,8,3,2,TikTok Shop,
+PKG-0154,2026-08-17,2026-08-23,Flash Express,สุราษฎร์ธานี,ใต้,อุปกรณ์ไอที,1.43,510,122.71,0,1458.44,พร้อมเพย์,ส่งสำเร็จ,6,1,1,Facebook,
+PKG-0155,2026-04-10,,Thailand Post,ชลบุรี,ตะวันออก,เครื่องสำอาง,4.72,190,105.83,0,8611.62,บัตรเครดิต,กำลังจัดส่ง,,,3,Shopee,
+PKG-0156,2026-07-03,2026-07-12,J&T Express,ระยอง,ตะวันออก,อุปกรณ์กีฬา,7.22,812,227.63,0,2151.32,โอนเงิน,ส่งสำเร็จ,9,5,1,เว็บไซต์,
+PKG-0157,2026-01-11,2026-01-17,Kerry Express,นนทบุรี,กลาง,อุปกรณ์กีฬา,13.66,1371,355.71,0,3877.83,โอนเงิน,ส่งสำเร็จ,6,1,2,Shopee,
+PKG-0158,2026-01-12,2026-01-17,Best Express,ชัยภูมิ,อีสาน,เสื้อผ้า,15.45,542,207.21,15,6818.8,เก็บเงินปลายทาง,ส่งสำเร็จ,5,4,2,TikTok Shop,
+PKG-0159,2026-05-04,,Kerry Express,อุบลราชธานี,อีสาน,ของใช้ในบ้าน,13.79,1147,315.56,0,5138.0,พร้อมเพย์,จัดส่งไม่สำเร็จ,,,2,เว็บไซต์,ปลายทางไม่อยู่
+PKG-0160,2026-03-31,2026-04-04,Flash Express,อุบลราชธานี,อีสาน,เครื่องเขียน,11.73,769,240.32,35,6495.91,เก็บเงินปลายทาง,ส่งสำเร็จ,4,3,1,Lazada,
+PKG-0161,2026-01-18,2026-01-20,Thailand Post,ชัยภูมิ,อีสาน,อาหารแห้ง,11.92,1252,311.85,0,7813.52,พร้อมเพย์,ส่งสำเร็จ,2,1,2,Shopee,
+PKG-0162,2026-03-16,,Best Express,นครราชสีมา,อีสาน,ของใช้ในบ้าน,1.99,19,45.95,0,4419.08,โอนเงิน,กำลังจัดส่ง,,,2,Facebook,
+PKG-0163,2026-06-18,2026-06-27,Kerry Express,กรุงเทพมหานคร,ภาคอีสาน,เครื่องเขียน,6.67,645,193.86,0,2182.23,พร้อมเพย์,ส่งสำเร็จ,9,2,1,TikTok Shop,
+PKG-0164,2026-08-24,2026-09-02,Kerry Express,ชลบุรี,ตะวันออก,อุปกรณ์ไอที,14.49,26,139.75,0,6902.17,บัตรเครดิต,ส่งสำเร็จ,9,2,1,TikTok Shop,
+PKG-0165,2026-09-12,2026-09-21,J&T Express,ชลบุรี,ตะวันออก,อาหารแห้ง,14.31,582,226.4,25,1943.13,เก็บเงินปลายทาง,ส่งสำเร็จ,9,1,2,เว็บไซต์,
+PKG-0166,2026-05-20,2026-05-23,Flash Express,นนทบุรี,กลาง,หนังสือ,12.36,1377,346.08,25,5814.22,เก็บเงินปลายทาง,ส่งสำเร็จ,-5,1,3,เว็บไซต์,
+PKG-0167,2026-03-26,2026-04-03,Kerry Express,ขอนแก่น,อีสาน,ของใช้ในบ้าน,2.99,1422,270.95,25,3080.45,เก็บเงินปลายทาง,ส่งสำเร็จ,8,3,3,Facebook,
+PKG-0168,2026-07-10,2026-07-16,Thailand Post,เชียงใหม่,เหนือ,เสื้อผ้า, 3.50 ,376,111.56,0,1888.53,บัตรเครดิต,ส่งสำเร็จ,6,4,2,เว็บไซต์,
+PKG-0169,2026-06-28,2026-07-07,Flash Express,เชียงราย,เหนือ,หนังสือ,7.93,505,182.92,0,6162.78,บัตรเครดิต,ส่งสำเร็จ,9,1,1,Shopee,
+PKG-0170,2026-02-07,2026-02-16,Kerry Express,สงขลา,ใต้,เครื่องสำอาง,2.76,505,147.7,35,958.65,เก็บเงินปลายทาง,ส่งสำเร็จ,9,2,1,Shopee,
+PKG-0171,2026-08-29,2026-08-30,Flash Express,เชียงราย,เหนือ,หนังสือ,11.1,128,132.77,0,5457.48,COD,ส่งสำเร็จ,1,2,1,Shopee,
+PKG-0172,2026-06-01,,Kerry Express,นนทบุรี,กลาง,เสื้อผ้า,7.11,384,158.54,0,4654.27,บัตรเครดิต,กำลังจัดส่ง,,,1,Shopee,
+PKG-0173,2026-06-29,2026-07-03,Flash Express,ขอนแก่น,อีสาน,เครื่องสำอาง,9.09,203,114.35,25,1550.79,เก็บเงินปลายทาง,ส่งสำเร็จ,4,1,3,เว็บไซต์,
+PKG-0174,2026-09-09,2026-09-15,Kerry Express,นนทบุรี,กลาง,ของใช้ในบ้าน,10.49,1011,254.36,0,3110.54,โอนเงิน,ส่งสำเร็จ,6,2,3,เว็บไซต์,
+PKG-0175,2026-08-28,2026-08-29,J&T Express,สงขลา,ใต้,อุปกรณ์ไอที,13.11,603,220.97,0,7101.56,บัตรเครดิต,ส่งสำเร็จ,1,1,3,เว็บไซต์,
+PKG-0176,2026-01-13,2026-01-22,Flash Express,ระยอง,ตะวันออก,หนังสือ,7.19,473,159.14,0,631.34,โอนเงิน,ส่งสำเร็จ,9,2,2,TikTok Shop,
+PKG-0177,2026-09-16,,Kerry Express,กรุงเทพมหานคร,กลาง,เสื้อผ้า,5.22,,187.15,0,5148.49,พร้อมเพย์,กำลังจัดส่ง,,,3,เว็บไซต์,
+PKG-0178,2026-01-24,,J&T Express,ภูเก็ต,ใต้,อุปกรณ์กีฬา,12.21,299,154.28,0,7368.93,โอนเงิน,ส่งสำเร็จ,,,1,Facebook,
+PKG-0179,2026-02-04,2026-02-11,Kerry Express,นนทบุรี,กลาง,อุปกรณ์ไอที,13.97,1368,339.14,0,1887.38,พร้อมเพย์,ส่งสำเร็จ,7,1,2,Facebook,
+PKG-0180,2026-05-05,,Best Express,นนทบุรี,กลาง,เครื่องสำอาง,0.16,355,103.73,25,6998.52,เก็บเงินปลายทาง,จัดส่งไม่สำเร็จ,,,3,Facebook,ติดต่อผู้รับไม่ได้
+PKG-0181,2026-07-13,2026-07-16,Thailand Post,ระยอง,ตะวันออก,ของใช้ในบ้าน,0.38,1446,268.06,0,6165.45,พร้อมเพย์,ส่งสำเร็จ,3,1,3,Lazada,
+PKG-0182,2026-05-12,2026-05-20,Flash Express,นครราชสีมา,อีสาน,เสื้อผ้า,12.81,1235,313.96,15,6304.75,เก็บเงินปลายทาง,ส่งสำเร็จ,8,4,1,Shopee,
+PKG-0183,2026-05-22,2026-05-23,Thailand Post,นครราชสีมา,อีสาน,เครื่องสำอาง,11.13,779,243.07,-20,610.44,โอนเงิน,ส่งสำเร็จ,1,4,1,Lazada,
+PKG-0184,2026-07-04,2026-07-08,J&T Express,นนทบุรี,กลาง,อาหารแห้ง,13.06,240,150.27,0,474.98,พร้อมเพย์,ส่งสำเร็จ,4,2,3,Shopee,
+PKG-0185,2026-03-03,,Best Express,ชลบุรี,ตะวันออก,เสื้อผ้า,2.56,1075,214.65,25,1547.78,เก็บเงินปลายทาง,จัดส่งไม่สำเร็จ,,,3,Lazada,ที่อยู่ไม่ชัดเจน
+PKG-0186,2026-03-10,,Best Express,ระยอง,ตะวันออก,อุปกรณ์กีฬา,4.91,882,204.41,0,6367.17,พร้อมเพย์,จัดส่งไม่สำเร็จ,,,3,Shopee,ปลายทางไม่อยู่
+PKG-0187,2026-01-19,2026-01-21,Best Express,ชลบุรี,ตะวันออก,เครื่องสำอาง,13.4,217,169.3,25,1730.82,เก็บเงินปลายทาง,ส่งสำเร็จ,2,4,1,Facebook,
+PKG-0188,2026-01-20,,J&T Express,เชียงใหม่,เหนือ,เครื่องสำอาง,0.62,358,113.79,35,6012.16,เก็บเงินปลายทาง,กำลังจัดส่ง,,,2,Lazada,
+PKG-0189,2026-07-10,2026-07-19,J&T Express,นครราชสีมา,อีสาน,อุปกรณ์กีฬา,12.43,652,206.4,15,8289.41,เก็บเงินปลายทาง,ส่งสำเร็จ,9,4,3,Shopee,
+PKG-0190,2026-03-17,2026-03-20,Best Express,ระยอง,ตะวันออก,อุปกรณ์กีฬา,7.18,298,138.72,0,5093.19,บัตรเครดิต,ส่งสำเร็จ,3,1,2,เว็บไซต์,
+PKG-0018,2026-07-02,2026-07-04,Flash Express,กรุงเทพมหานคร,กลาง,อุปกรณ์กีฬา,1.89,1381,269.34,0,6397.35,โอนเงิน,ส่งสำเร็จ,2,1,2,Lazada,
+PKG-0192,2026-06-28,2026-07-01,Best Express,ชลบุรี,ตะวันออก,เสื้อผ้า,7.4,1416,299.69,0,2511.49,บัตรเครดิต,ส่งสำเร็จ,3,1,2,เว็บไซต์,
+PKG-0193,2026-05-07,2026-05-16,Flash Express,เชียงใหม่,เหนือ,ของใช้ในบ้าน,7.22,1428,316.83,0,3642.64,บัตรเครดิต,ส่งสำเร็จ,9,3,2,Lazada,
+PKG-0194,2026-05-27,,Thailand Post,เชียงใหม่,เหนือ,เสื้อผ้า,16.85,58,162.16,0,2021.7,บัตรเครดิต,จัดส่งไม่สำเร็จ,,,3,Lazada,ติดต่อผู้รับไม่ได้
+PKG-0195,2026-05-25,2026-05-29,,นนทบุรี,กลาง,อาหารแห้ง,14.79,1350,349.49,25,2543.39,เก็บเงินปลายทาง,ส่งสำเร็จ,4,5,1,Lazada,
+PKG-0196,2026-03-15,,Thailand Post,นนทบุรี,กลาง,หนังสือ,13.46,419,201.97,0,7094.87,บัตรเครดิต,จัดส่งไม่สำเร็จ,,,3,Facebook,ติดต่อผู้รับไม่ได้
+PKG-0197,2026-09-11,2026-09-15,Kerry Express,ภูเก็ต,ใต้,หนังสือ,0.63,461,130.02,15,1821.8,เก็บเงินปลายทาง,ส่งสำเร็จ,4,1,1,TikTok Shop,
+PKG-0198,2026-06-08,2026-06-09,Kerry Express,นครราชสีมา,อีสาน,อุปกรณ์กีฬา,หนักมาก,1219,308.22,35,5228.32,เก็บเงินปลายทาง,ส่งสำเร็จ,1,4,3,TikTok Shop,
+PKG-0199,2026-03-06,2026-03-07,Best Express,สงขลา,ใต้,เครื่องสำอาง,1.81,329,109.43,0,1262.39,โอนเงิน,ส่งสำเร็จ,1,2,1,Facebook,
+PKG-0100,2026-04-05,2026-04-13,Best Express,ระยอง,ตะวันออก,ของใช้ในบ้าน,3.97,1311,275.71,0,1165.02,บัตรเครดิต,ส่งสำเร็จ,8,1,1,TikTok Shop,`;
+
+    // Load Initial CSV Data from Workspace
+    async function loadInitialCsv() {
+      try {
+        const response = await fetch('delivery_logistics_dirty_200.csv');
+        if (!response.ok) throw new Error('Fetch status not ok');
+        const csvText = await response.text();
+        parseAndProcessCsv(csvText, 'delivery_logistics_dirty_200.csv');
+      } catch (err) {
+        console.warn('Fetch failed (likely file:// protocol or CORS restriction), using embedded dataset:', err);
+        parseAndProcessCsv(EMBEDDED_DEFAULT_CSV, 'delivery_logistics_dirty_200.csv');
+      }
+    }
+
+    // Parse and Run Comprehensive Data Quality Audit
+    function parseAndProcessCsv(csvString, fileName = 'dataset.csv') {
+      Papa.parse(csvString, {
+        header: false,
+        skipEmptyLines: 'greedy',
+        complete: function(results) {
+          if (!results.data || results.data.length < 2) {
+            alert('ไฟล์ CSV ไม่มีข้อมูลหรือรูปแบบไม่ถูกต้อง');
+            return;
+          }
+
+          rawHeaders = results.data[0].map(h => h.trim());
+          rawDataRows = results.data.slice(1);
+          activeDataRows = [...rawDataRows];
+
+          document.getElementById('activeFileName').textContent = fileName;
+          document.getElementById('activeFileMeta').textContent = `${rawDataRows.length} แถว • ${rawHeaders.length} คอลัมน์`;
+          document.getElementById('sideRowCount').textContent = `${rawDataRows.length} แถว`;
+          document.getElementById('rawRowCountText').textContent = rawDataRows.length;
+
+          // Run Audit Engine
+          runDataQualityAudit();
+
+          // Populate filter dropdowns
+          populateFilterDropdowns();
+
+          // Update Views
+          updateDashboardKPIs();
+          renderOverviewStatusChart();
+          updateQualitySummaryMetrics();
+          renderErrorTable();
+          renderRawTable();
+          updateBusinessImpactComparison();
+
+          lucide.createIcons();
+        }
+      });
+    }
+
+    // =========================================================
+    // DATA QUALITY AUDIT ENGINE (ตรวจจับ 5 ประเภท & 3 ระดับแจ้งเตือน)
+    // =========================================================
+    function runDataQualityAudit() {
+      detectedAnomalies = [];
+
+      // Check Duplicates across entire dataset
+      const pkgCountMap = {};
+      rawDataRows.forEach((r, idx) => {
+        const pkg = (r[0] || '').trim();
+        if (pkg) {
+          if (!pkgCountMap[pkg]) pkgCountMap[pkg] = [];
+          pkgCountMap[pkg].push(idx + 2); // Row 1 is header, so row starts at 2
+        }
+      });
+
+      // Date parser helper
+      function checkDateString(dStr) {
+        if (!dStr) return { valid: false, reason: 'empty' };
+        dStr = dStr.trim();
+        if (dStr.includes('/')) return { valid: false, reason: 'slash_format' };
+        const match = dStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (!match) return { valid: false, reason: 'malformed' };
+        const y = parseInt(match[1]), m = parseInt(match[2]), d = parseInt(match[3]);
+        if (m < 1 || m > 12) return { valid: false, reason: 'invalid_month' };
+        const dateObj = new Date(y, m - 1, d);
+        if (dateObj.getFullYear() !== y || dateObj.getMonth() !== (m - 1) || dateObj.getDate() !== d) {
+          return { valid: false, reason: 'invalid_day' };
+        }
+        return { valid: true, date: dateObj };
+      }
+
+      rawDataRows.forEach((row, rowIdx) => {
+        const csvRow = rowIdx + 2; // Row number in CSV
+        const pkg = (row[0] || '').trim();
+        const pDateStr = (row[1] || '').trim();
+        const dDateStr = (row[2] || '').trim();
+        const courier = (row[3] || '').trim();
+        const province = (row[4] || '').trim();
+        const region = (row[5] || '').trim();
+        const category = (row[6] || '').trim();
+        const weightStr = (row[7] || '').trim();
+        const distStr = (row[8] || '').trim();
+        const shipCostStr = (row[9] || '').trim();
+        const codFeeStr = (row[10] || '').trim();
+        const prodValStr = (row[11] || '').trim();
+        const payMethod = (row[12] || '').trim();
+        const status = (row[13] || '').trim();
+        const delivDaysStr = (row[14] || '').trim();
+        const satScoreStr = (row[15] || '').trim();
+        const attemptsStr = (row[16] || '').trim();
+        const channel = (row[17] || '').trim();
+        const failReason = (row[18] || '').trim();
+
+        // 1. DUPLICATES
+        if (pkg && pkgCountMap[pkg] && pkgCountMap[pkg].length > 1) {
+          const otherRows = pkgCountMap[pkg].filter(r => r !== csvRow);
+          detectedAnomalies.push({
+            row: csvRow, pkg, col: 'รหัสพัสดุ', val: pkg,
+            type: 'Duplicates',
+            desc: `รหัสพัสดุซ้ำกับแถว ${otherRows.join(', ')} (ปรากฏทั้งหมด ${pkgCountMap[pkg].length} ครั้ง)`,
+            severity: 'ผิดแน่นอน'
+          });
+        }
+
+        // 2. MISSING VALUES & CONTEXT EVALUATION
+        if (!pkg) {
+          detectedAnomalies.push({ row: csvRow, pkg, col: 'รหัสพัสดุ', val: '', type: 'Missing Values', desc: 'รหัสพัสดุเป็นค่าว่าง', severity: 'ผิดแน่นอน' });
+        }
+        if (!pDateStr) {
+          detectedAnomalies.push({ row: csvRow, pkg, col: 'วันที่รับพัสดุ', val: '', type: 'Missing Values', desc: 'วันที่รับพัสดุเป็นค่าว่าง', severity: 'ผิดแน่นอน' });
+        }
+        if (!courier) {
+          detectedAnomalies.push({ row: csvRow, pkg, col: 'บริษัทขนส่ง', val: '', type: 'Missing Values', desc: 'ไม่ระบุบริษัทขนส่งในระบบ', severity: 'ผิดแน่นอน' });
+        }
+        if (!province) {
+          detectedAnomalies.push({ row: csvRow, pkg, col: 'จังหวัดปลายทาง', val: '', type: 'Missing Values', desc: 'ไม่ระบุจังหวัดปลายทาง', severity: 'ผิดแน่นอน' });
+        }
+        if (!region) {
+          detectedAnomalies.push({ row: csvRow, pkg, col: 'ภูมิภาค', val: '', type: 'Missing Values', desc: 'ไม่ระบุภูมิภาคปลายทาง', severity: 'ควรตรวจสอบ' });
+        }
+        if (!weightStr) {
+          detectedAnomalies.push({ row: csvRow, pkg, col: 'น้ำหนัก_กก', val: '', type: 'Missing Values', desc: 'น้ำหนักสินค้าเป็นค่าว่าง', severity: 'ผิดแน่นอน' });
+        }
+        if (!distStr) {
+          detectedAnomalies.push({ row: csvRow, pkg, col: 'ระยะทาง_กม', val: '', type: 'Missing Values', desc: 'ระยะทางเป็นค่าว่าง', severity: 'ควรตรวจสอบ' });
+        }
+        if (!shipCostStr) {
+          detectedAnomalies.push({ row: csvRow, pkg, col: 'ค่าจัดส่ง_บาท', val: '', type: 'Missing Values', desc: 'ค่าจัดส่งเป็นค่าว่าง', severity: 'ผิดแน่นอน' });
+        }
+        if (!prodValStr) {
+          detectedAnomalies.push({ row: csvRow, pkg, col: 'มูลค่าสินค้า_บาท', val: '', type: 'Missing Values', desc: 'มูลค่าสินค้าเป็นค่าว่าง', severity: 'ควรตรวจสอบ' });
+        }
+        if (!status) {
+          detectedAnomalies.push({ row: csvRow, pkg, col: 'สถานะพัสดุ', val: '', type: 'Missing Values', desc: 'สถานะพัสดุเป็นค่าว่าง', severity: 'ผิดแน่นอน' });
+        }
+
+        // Contextual Empty: วันที่จัดส่งสำเร็จ
+        if (!dDateStr) {
+          if (['กำลังจัดส่ง', 'ตีกลับ', 'จัดส่งไม่สำเร็จ'].includes(status)) {
+            detectedAnomalies.push({
+              row: csvRow, pkg, col: 'วันที่จัดส่งสำเร็จ', val: '(ค่าว่าง)',
+              type: 'Missing Values',
+              desc: `ไม่มีวันที่จัดส่งสำเร็จเนื่องจากพัสดุมีสถานะ "${status}" (พัสดุยังส่งไม่สำเร็จ)`,
+              severity: 'ค่าว่างที่อาจสมเหตุสมผล'
+            });
+          } else if (['ส่งสำเร็จ', 'สำเร็จ', 'Delivered'].includes(status)) {
+            detectedAnomalies.push({
+              row: csvRow, pkg, col: 'วันที่จัดส่งสำเร็จ', val: '',
+              type: 'Inconsistent Data',
+              desc: `พัสดุระบุสถานะ "${status}" แต่ไม่มีวันที่จัดส่งสำเร็จบันทึกไว้`,
+              severity: 'ผิดแน่นอน'
+            });
+          }
+        } else {
+          if (['กำลังจัดส่ง', 'ตีกลับ', 'จัดส่งไม่สำเร็จ'].includes(status)) {
+            detectedAnomalies.push({
+              row: csvRow, pkg, col: 'วันที่จัดส่งสำเร็จ', val: dDateStr,
+              type: 'Inconsistent Data',
+              desc: `สถานะระบุว่า "${status}" แต่กลับมีวันที่ส่งสำเร็จบันทึกไว้ (${dDateStr})`,
+              severity: 'ควรตรวจสอบ'
+            });
+          }
+        }
+
+        // Contextual Empty: เหตุผลที่จัดส่งไม่สำเร็จ
+        if (!failReason) {
+          if (['ส่งสำเร็จ', 'สำเร็จ', 'Delivered'].includes(status)) {
+            detectedAnomalies.push({
+              row: csvRow, pkg, col: 'เหตุผลที่จัดส่งไม่สำเร็จ', val: '(ค่าว่าง)',
+              type: 'Missing Values',
+              desc: 'ไม่มีเหตุผลเนื่องจากพัสดุจัดส่งสำเร็จเรียบร้อย',
+              severity: 'ค่าว่างที่อาจสมเหตุสมผล'
+            });
+          } else if (['ตีกลับ', 'จัดส่งไม่สำเร็จ'].includes(status)) {
+            detectedAnomalies.push({
+              row: csvRow, pkg, col: 'เหตุผลที่จัดส่งไม่สำเร็จ', val: '',
+              type: 'Missing Values',
+              desc: `สถานะ "${status}" แต่ไม่ได้บันทึกสาเหตุที่ไม่สำเร็จ`,
+              severity: 'ควรตรวจสอบ'
+            });
+          }
+        }
+
+        // 3. INVALID DATA & INCONSISTENCY (Dates)
+        const pDateCheck = checkDateString(pDateStr);
+        const dDateCheck = checkDateString(dDateStr);
+
+        if (pDateStr) {
+          if (pDateCheck.reason === 'slash_format') {
+            detectedAnomalies.push({ row: csvRow, pkg, col: 'วันที่รับพัสดุ', val: pDateStr, type: 'Invalid Data', desc: `รูปแบบวันที่ใช้เครื่องหมายทับและเดือนผิด (เช่น ${pDateStr})`, severity: 'ผิดแน่นอน' });
+          } else if (pDateCheck.reason === 'invalid_day') {
+            detectedAnomalies.push({ row: csvRow, pkg, col: 'วันที่รับพัสดุ', val: pDateStr, type: 'Invalid Data', desc: `วันที่ไม่มีอยู่จริงในปฏิทิน (${pDateStr})`, severity: 'ผิดแน่นอน' });
+          } else if (!pDateCheck.valid && pDateCheck.reason !== 'empty') {
+            detectedAnomalies.push({ row: csvRow, pkg, col: 'วันที่รับพัสดุ', val: pDateStr, type: 'Invalid Data', desc: `ข้อความไม่ใช่วันที่: "${pDateStr}"`, severity: 'ผิดแน่นอน' });
+          }
+        }
+
+        if (dDateStr) {
+          if (dDateCheck.reason === 'slash_format') {
+            detectedAnomalies.push({ row: csvRow, pkg, col: 'วันที่จัดส่งสำเร็จ', val: dDateStr, type: 'Invalid Data', desc: `รูปแบบวันที่ใช้เครื่องหมายทับ (${dDateStr})`, severity: 'ผิดแน่นอน' });
+          } else if (dDateCheck.reason === 'invalid_day') {
+            detectedAnomalies.push({ row: csvRow, pkg, col: 'วันที่จัดส่งสำเร็จ', val: dDateStr, type: 'Invalid Data', desc: `วันที่ไม่มีอยู่จริงในปฏิทิน (เช่น 2026-02-30 เดือน ก.พ. ไม่มี 30 วัน)`, severity: 'ผิดแน่นอน' });
+          } else if (!dDateCheck.valid && dDateCheck.reason !== 'empty') {
+            detectedAnomalies.push({ row: csvRow, pkg, col: 'วันที่จัดส่งสำเร็จ', val: dDateStr, type: 'Invalid Data', desc: `ข้อความไม่ใช่วันที่: "${dDateStr}"`, severity: 'ผิดแน่นอน' });
+          }
+        }
+
+        // Date conflict: Delivered before Pickup
+        if (pDateCheck.valid && dDateCheck.valid) {
+          if (dDateCheck.date < pDateCheck.date) {
+            detectedAnomalies.push({
+              row: csvRow, pkg, col: 'วันที่จัดส่งสำเร็จ', val: dDateStr,
+              type: 'Invalid Data',
+              desc: `วันที่จัดส่งสำเร็จ (${dDateStr}) เกิดขึ้นก่อนวันที่รับพัสดุ (${pDateStr})`,
+              severity: 'ผิดแน่นอน'
+            });
+          } else {
+            const diffDays = Math.round((dDateCheck.date - pDateCheck.date) / (1000 * 60 * 60 * 24));
+            if (delivDaysStr && !isNaN(delivDaysStr)) {
+              const recordedDays = parseFloat(delivDaysStr);
+              if (Math.abs(recordedDays - diffDays) > 0) {
+                detectedAnomalies.push({
+                  row: csvRow, pkg, col: 'ระยะเวลาจัดส่ง_วัน', val: delivDaysStr,
+                  type: 'Inconsistent Data',
+                  desc: `ระยะเวลาที่บันทึก (${delivDaysStr} วัน) ขัดแย้งกับผลต่างจริงของวันที่ (${diffDays} วัน)`,
+                  severity: 'ควรตรวจสอบ'
+                });
+              }
+            }
+          }
+        }
+
+        // 4. OUTLIERS & NUMERIC VALIDATIONS
+        // Weight
+        if (weightStr) {
+          const cleanWeight = weightStr.replace(/\s+/g, '');
+          const wVal = parseFloat(cleanWeight);
+          if (isNaN(wVal)) {
+            detectedAnomalies.push({ row: csvRow, pkg, col: 'น้ำหนัก_กก', val: weightStr, type: 'Invalid Data', desc: `ค่าน้ำหนักเป็นข้อความ ไม่ใช่ตัวเลข: "${weightStr}"`, severity: 'ผิดแน่นอน' });
+          } else if (wVal < 0) {
+            detectedAnomalies.push({ row: csvRow, pkg, col: 'น้ำหนัก_กก', val: weightStr, type: 'Outliers', desc: `น้ำหนักติดลบ (${wVal} กก.) เป็นค่าที่ใช้ไม่ได้`, severity: 'ผิดแน่นอน' });
+          } else if (wVal > 100) {
+            detectedAnomalies.push({ row: csvRow, pkg, col: 'น้ำหนัก_กก', val: weightStr, type: 'Outliers', desc: `น้ำหนักสูงผิดปกติ (${wVal} กก.) เป็นค่าสูงน่าสงสัย`, severity: 'ควรตรวจสอบ' });
+          }
+        }
+
+        // Distance
+        if (distStr) {
+          const distVal = parseFloat(distStr);
+          if (isNaN(distVal)) {
+            detectedAnomalies.push({ row: csvRow, pkg, col: 'ระยะทาง_กม', val: distStr, type: 'Invalid Data', desc: `ระยะทางไม่ใช่ตัวเลข: "${distStr}"`, severity: 'ผิดแน่นอน' });
+          } else if (distVal < 0) {
+            detectedAnomalies.push({ row: csvRow, pkg, col: 'ระยะทาง_กม', val: distStr, type: 'Outliers', desc: `ระยะทางติดลบ (${distVal} กม.) เป็นค่าที่ใช้ไม่ได้`, severity: 'ผิดแน่นอน' });
+          } else if (distVal > 3000) {
+            detectedAnomalies.push({ row: csvRow, pkg, col: 'ระยะทาง_กม', val: distStr, type: 'Outliers', desc: `ระยะทางสูงเกินจริงสำหรับประเทศไทย (${distVal.toLocaleString()} กม.) เป็นค่าสูงน่าสงสัย`, severity: 'ควรตรวจสอบ' });
+          }
+        }
+
+        // Shipping Cost
+        if (shipCostStr) {
+          const cleanShip = shipCostStr.replace(/,/g, '').replace(/"/g, '').trim();
+          const shipVal = parseFloat(cleanShip);
+          if (shipCostStr.includes(',') || shipCostStr.includes('"')) {
+            detectedAnomalies.push({ row: csvRow, pkg, col: 'ค่าจัดส่ง_บาท', val: shipCostStr, type: 'Invalid Data', desc: `พบเครื่องหมายคำพูดหรือคอมมาในช่องตัวเลข: ${shipCostStr}`, severity: 'ควรตรวจสอบ' });
+          }
+          if (isNaN(shipVal)) {
+            detectedAnomalies.push({ row: csvRow, pkg, col: 'ค่าจัดส่ง_บาท', val: shipCostStr, type: 'Invalid Data', desc: `ค่าจัดส่งไม่ใช่ตัวเลข: "${shipCostStr}"`, severity: 'ผิดแน่นอน' });
+          } else if (shipVal < 0) {
+            detectedAnomalies.push({ row: csvRow, pkg, col: 'ค่าจัดส่ง_บาท', val: shipCostStr, type: 'Outliers', desc: `ค่าจัดส่งติดลบ (${shipVal} บาท) เป็นค่าที่ใช้ไม่ได้`, severity: 'ผิดแน่นอน' });
+          } else if (shipVal > 10000) {
+            detectedAnomalies.push({ row: csvRow, pkg, col: 'ค่าจัดส่ง_บาท', val: shipCostStr, type: 'Outliers', desc: `ค่าจัดส่งสูงเกินจริงอย่างมาก (${shipVal.toLocaleString()} บาท) เป็นค่าที่ใช้ไม่ได้`, severity: 'ผิดแน่นอน' });
+          }
+        }
+
+        // COD Fee
+        if (codFeeStr) {
+          const codVal = parseFloat(codFeeStr);
+          if (!isNaN(codVal) && codVal < 0) {
+            detectedAnomalies.push({ row: csvRow, pkg, col: 'ค่าบริการเก็บเงินปลายทาง_บาท', val: codFeeStr, type: 'Outliers', desc: `ค่าบริการ COD ติดลบ (${codVal} บาท) เป็นค่าที่ใช้ไม่ได้`, severity: 'ผิดแน่นอน' });
+          }
+        }
+
+        // Product Value
+        if (prodValStr) {
+          const cleanVal = prodValStr.replace(/฿/g, '').replace(/,/g, '').replace(/"/g, '').trim();
+          const pVal = parseFloat(cleanVal);
+          if (prodValStr.includes('฿') || prodValStr.includes('"')) {
+            detectedAnomalies.push({ row: csvRow, pkg, col: 'มูลค่าสินค้า_บาท', val: prodValStr, type: 'Invalid Data', desc: `พบสัญลักษณ์สกุลเงินในช่องตัวเลข: "${prodValStr}"`, severity: 'ควรตรวจสอบ' });
+          }
+          if (isNaN(pVal)) {
+            detectedAnomalies.push({ row: csvRow, pkg, col: 'มูลค่าสินค้า_บาท', val: prodValStr, type: 'Invalid Data', desc: `มูลค่าสินค้าไม่ใช่ตัวเลข: "${prodValStr}"`, severity: 'ผิดแน่นอน' });
+          } else if (pVal < 0) {
+            detectedAnomalies.push({ row: csvRow, pkg, col: 'มูลค่าสินค้า_บาท', val: prodValStr, type: 'Outliers', desc: `มูลค่าสินค้าติดลบ (${pVal} บาท) เป็นค่าที่ใช้ไม่ได้`, severity: 'ผิดแน่นอน' });
+          } else if (pVal > 1000000) {
+            detectedAnomalies.push({ row: csvRow, pkg, col: 'มูลค่าสินค้า_บาท', val: prodValStr, type: 'Outliers', desc: `มูลค่าสินค้าสูงผิดปกติ (${pVal.toLocaleString()} บาท) เป็นค่าสูงน่าสงสัย`, severity: 'ควรตรวจสอบ' });
+          }
+        }
+
+        // Delivery Days
+        if (delivDaysStr) {
+          const dDays = parseFloat(delivDaysStr);
+          if (isNaN(dDays)) {
+            detectedAnomalies.push({ row: csvRow, pkg, col: 'ระยะเวลาจัดส่ง_วัน', val: delivDaysStr, type: 'Invalid Data', desc: `ระยะเวลาจัดส่งไม่ใช่ตัวเลข: "${delivDaysStr}"`, severity: 'ผิดแน่นอน' });
+          } else if (dDays < 0) {
+            detectedAnomalies.push({ row: csvRow, pkg, col: 'ระยะเวลาจัดส่ง_วัน', val: delivDaysStr, type: 'Invalid Data', desc: `ระยะเวลาจัดส่งติดลบ (${dDays} วัน) ข้อมูลผิดปกติ`, severity: 'ผิดแน่นอน' });
+          }
+        }
+
+        // Satisfaction Score (1-5)
+        if (satScoreStr) {
+          const satVal = parseFloat(satScoreStr);
+          if (isNaN(satVal)) {
+            detectedAnomalies.push({ row: csvRow, pkg, col: 'คะแนนความพึงพอใจ', val: satScoreStr, type: 'Invalid Data', desc: `คะแนนความพึงพอใจไม่ใช่ตัวเลข: "${satScoreStr}"`, severity: 'ผิดแน่นอน' });
+          } else if (satVal < 1 || satVal > 5) {
+            detectedAnomalies.push({ row: csvRow, pkg, col: 'คะแนนความพึงพอใจ', val: satScoreStr, type: 'Invalid Data', desc: `คะแนนความพึงพอใจไม่อยู่ในช่วง 1-5 (ระบุค่า: ${satVal})`, severity: 'ผิดแน่นอน' });
+          }
+        } else {
+          if (['ส่งสำเร็จ', 'สำเร็จ', 'Delivered'].includes(status)) {
+            detectedAnomalies.push({ row: csvRow, pkg, col: 'คะแนนความพึงพอใจ', val: '(ค่าว่าง)', type: 'Missing Values', desc: 'ลูกค้ายังไม่ได้ให้คะแนนความพึงพอใจ', severity: 'ค่าว่างที่อาจสมเหตุสมผล' });
+          }
+        }
+
+        // Delivery Attempts
+        if (attemptsStr) {
+          const attVal = parseInt(attemptsStr);
+          if (isNaN(attVal)) {
+            detectedAnomalies.push({ row: csvRow, pkg, col: 'จำนวนครั้งที่จัดส่ง', val: attemptsStr, type: 'Invalid Data', desc: `จำนวนครั้งที่จัดส่งไม่ใช่ตัวเลข: "${attemptsStr}"`, severity: 'ผิดแน่นอน' });
+          } else if (attVal === 0) {
+            detectedAnomalies.push({ row: csvRow, pkg, col: 'จำนวนครั้งที่จัดส่ง', val: attemptsStr, type: 'Invalid Data', desc: 'จำนวนครั้งที่จัดส่งเป็น 0 (พัสดุสำเร็จแต่ระบุจัดส่ง 0 ครั้ง)', severity: 'ผิดแน่นอน' });
+          } else if (attVal < 0) {
+            detectedAnomalies.push({ row: csvRow, pkg, col: 'จำนวนครั้งที่จัดส่ง', val: attemptsStr, type: 'Invalid Data', desc: `จำนวนครั้งที่จัดส่งติดลบ (${attVal})`, severity: 'ผิดแน่นอน' });
+          }
+        }
+
+        // Region vs Province Consistency
+        const cleanProv = province.trim();
+        if (cleanProv && PROVINCE_REGION_MAP[cleanProv]) {
+          const expectedReg = PROVINCE_REGION_MAP[cleanProv];
+          const cleanReg = region.replace('ภาค', '').trim();
+          if (cleanReg && cleanReg !== expectedReg) {
+            detectedAnomalies.push({
+              row: csvRow, pkg, col: 'ภูมิภาค', val: region,
+              type: 'Inconsistent Data',
+              desc: `ระบุภูมิภาค "${region}" ไม่สอดคล้องกับจังหวัด "${province}" (จังหวัดนี้อยู่ภาค${expectedReg})`,
+              severity: 'ควรตรวจสอบ'
+            });
+          }
+        }
+
+        // Non-standard Status Strings
+        if (['สำเร็จ', 'Delivered'].includes(status)) {
+          detectedAnomalies.push({
+            row: csvRow, pkg, col: 'สถานะพัสดุ', val: status,
+            type: 'Inconsistent Data',
+            desc: `คำระบุสถานะไม่เป็นมาตรฐาน ("${status}" สื่อความหมายเดียวกับ "ส่งสำเร็จ")`,
+            severity: 'ควรตรวจสอบ'
+          });
+        }
+      });
+
+      // Update Header Badges
+      const definiteCount = detectedAnomalies.filter(a => a.severity === 'ผิดแน่นอน').length;
+      const suspiciousCount = detectedAnomalies.filter(a => a.severity === 'ควรตรวจสอบ').length;
+      const validEmptyCount = detectedAnomalies.filter(a => a.severity === 'ค่าว่างที่อาจสมเหตุสมผล').length;
+
+      document.getElementById('topDefiniteErrors').textContent = `${definiteCount} ผิดแน่นอน`;
+      document.getElementById('topSuspiciousErrors').textContent = `${suspiciousCount} ควรตรวจสอบ`;
+      document.getElementById('topValidEmpties').textContent = `${validEmptyCount} ค่าว่างสมเหตุสมผล`;
+      document.getElementById('sideAnomalyBadge').textContent = `${definiteCount + suspiciousCount}`;
+      document.getElementById('sideErrorCount').textContent = `${detectedAnomalies.length} จุด`;
+    }
+
+    // =========================================================
+    // POPULATE GLOBAL FILTER DROPDOWNS
+    // =========================================================
+    function populateFilterDropdowns() {
+      const couriers = new Set();
+      const statuses = new Set();
+      const regions = new Set();
+      const payments = new Set();
+
+      rawDataRows.forEach(r => {
+        if (r[3]) couriers.add(r[3].trim());
+        if (r[13]) statuses.add(r[13].trim());
+        if (r[5]) regions.add(r[5].trim());
+        if (r[12]) payments.add(r[12].trim());
+      });
+
+      fillSelect('filterCourier', couriers);
+      fillSelect('filterStatus', statuses);
+      fillSelect('filterRegion', regions);
+      fillSelect('filterPayment', payments);
+    }
+
+    function fillSelect(elemId, setValues) {
+      const select = document.getElementById(elemId);
+      const defaultOpt = select.firstElementChild;
+      select.innerHTML = '';
+      select.appendChild(defaultOpt);
+      Array.from(setValues).sort().forEach(val => {
+        if (val) {
+          const opt = document.createElement('option');
+          opt.value = val;
+          opt.textContent = val;
+          select.appendChild(opt);
+        }
+      });
+    }
+
+    function applyGlobalFilters() {
+      const courier = document.getElementById('filterCourier').value;
+      const status = document.getElementById('filterStatus').value;
+      const region = document.getElementById('filterRegion').value;
+      const payment = document.getElementById('filterPayment').value;
+      const search = document.getElementById('globalSearchInput').value.trim().toLowerCase();
+
+      activeDataRows = rawDataRows.filter(r => {
+        if (courier && (r[3] || '').trim() !== courier) return false;
+        if (status && (r[13] || '').trim() !== status) return false;
+        if (region && (r[5] || '').trim() !== region) return false;
+        if (payment && (r[12] || '').trim() !== payment) return false;
+        if (search) {
+          const matchPkg = (r[0] || '').toLowerCase().includes(search);
+          const matchProv = (r[4] || '').toLowerCase().includes(search);
+          const matchCat = (r[6] || '').toLowerCase().includes(search);
+          if (!matchPkg && !matchProv && !matchCat) return false;
+        }
+        return true;
+      });
+
+      updateDashboardKPIs();
+      renderOverviewStatusChart();
+      if (currentView === 'charts') {
+        renderAllCharts();
+      }
+    }
+
+    function resetFilters() {
+      document.getElementById('filterCourier').value = '';
+      document.getElementById('filterStatus').value = '';
+      document.getElementById('filterRegion').value = '';
+      document.getElementById('filterPayment').value = '';
+      document.getElementById('globalSearchInput').value = '';
+      activeDataRows = [...rawDataRows];
+      applyGlobalFilters();
+    }
+
+    // =========================================================
+    // VIEW 1: UPDATE DASHBOARD KPIS (ภารกิจที่ 1: 15 คะแนน)
+    // =========================================================
+    function updateDashboardKPIs() {
+      // (1) Total Rows
+      const totalRows = activeDataRows.length;
+      document.getElementById('kpiTotalRows').textContent = totalRows.toLocaleString();
+
+      // (2) Unique PKG IDs
+      const uniquePkgs = new Set(activeDataRows.map(r => (r[0] || '').trim()).filter(Boolean));
+      document.getElementById('kpiUniquePkg').textContent = uniquePkgs.size.toLocaleString();
+
+      // (3) Delivered status count
+      let exactDelivered = 0;
+      let variantDelivered = 0;
+      activeDataRows.forEach(r => {
+        const s = (r[13] || '').trim();
+        if (s === 'ส่งสำเร็จ') exactDelivered++;
+        else if (s === 'สำเร็จ' || s.toLowerCase() === 'delivered') variantDelivered++;
+      });
+      document.getElementById('kpiDeliveredCount').textContent = (exactDelivered + variantDelivered).toLocaleString();
+      document.getElementById('kpiDeliveredDetail').textContent = `(ส่งสำเร็จ ${exactDelivered} รายการ + คำพ้อง ${variantDelivered} รายการ)`;
+
+      // (4) Valid Shipping Cost
+      let totalValidShipping = 0;
+      let validCostCount = 0;
+      activeDataRows.forEach(r => {
+        const rawCost = (r[9] || '').replace(/,/g, '').replace(/"/g, '').trim();
+        if (rawCost && !isNaN(rawCost)) {
+          const val = parseFloat(rawCost);
+          // Criterion: Must be positive and realistic (< 10,000)
+          if (val > 0 && val < 10000) {
+            totalValidShipping += val;
+            validCostCount++;
+          }
+        }
+      });
+      document.getElementById('kpiValidShippingCost').textContent = totalValidShipping.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+      // (5) Average Valid Delivery Days
+      let totalDays = 0;
+      let validDaysCount = 0;
+      activeDataRows.forEach(r => {
+        const status = (r[13] || '').trim();
+        const rawDays = (r[14] || '').trim();
+        if (rawDays && !isNaN(rawDays)) {
+          const d = parseFloat(rawDays);
+          // Criterion: Positive days (1-30) for delivered items
+          if (d > 0 && d <= 30 && ['ส่งสำเร็จ', 'สำเร็จ', 'Delivered'].includes(status)) {
+            totalDays += d;
+            validDaysCount++;
+          }
+        }
+      });
+      const avgDays = validDaysCount > 0 ? (totalDays / validDaysCount).toFixed(2) : '0.00';
+      document.getElementById('kpiAvgDeliveryDays').textContent = avgDays;
+    }
+
+    // Mini chart on overview page
+    function renderOverviewStatusChart() {
+      const ctx = document.getElementById('overviewStatusChart');
+      if (!ctx) return;
+
+      const statusMap = {};
+      activeDataRows.forEach(r => {
+        const s = (r[13] || '').trim() || 'ไม่ระบุ';
+        statusMap[s] = (statusMap[s] || 0) + 1;
+      });
+
+      if (chartInstances.overviewStatus) {
+        chartInstances.overviewStatus.destroy();
+      }
+
+      chartInstances.overviewStatus = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: Object.keys(statusMap),
+          datasets: [{
+            label: 'จำนวนพัสดุ (รายการ)',
+            data: Object.values(statusMap),
+            backgroundColor: ['#10b981', '#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#6b7280', '#10b981'],
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            y: { beginAtZero: true, grid: { color: 'rgba(150, 150, 150, 0.1)' } },
+            x: { grid: { display: false } }
+          }
+        }
+      });
+    }
+
+    // =========================================================
+    // VIEW 2: 4 CHARTS (ภารกิจที่ 2: 20 คะแนน)
+    // =========================================================
+    function renderAllCharts() {
+      renderChartCourier();
+      renderChartStatus();
+      renderChartProvince();
+      renderChartMonthly();
+    }
+
+    function toggleCourierGrouping(groupMode) {
+      courierGroupMode = groupMode;
+      document.getElementById('btnCourierRaw').classList.toggle('active', !groupMode);
+      document.getElementById('btnCourierGroup').classList.toggle('active', groupMode);
+      renderChartCourier();
+    }
+
+    function renderChartCourier() {
+      const ctx = document.getElementById('chartCourier');
+      if (!ctx) return;
+
+      const countMap = {};
+      activeDataRows.forEach(r => {
+        let courier = (r[3] || '').trim() || 'ไม่ระบุบริษัท';
+        if (courierGroupMode) {
+          courier = getNormalizedCourier(courier);
+        }
+        countMap[courier] = (countMap[courier] || 0) + 1;
+      });
+
+      if (chartInstances.courier) chartInstances.courier.destroy();
+
+      chartInstances.courier = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: Object.keys(countMap),
+          datasets: [{
+            label: 'จำนวนพัสดุ (รายการ)',
+            data: Object.values(countMap),
+            backgroundColor: '#4f46e5',
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                afterLabel: function(ctx) {
+                  return courierGroupMode ? 'ℹ️ จัดกลุ่มรวมชื่อพ้องความหมาย' : 'ℹ️ ชื่อดั้งเดิมตามไฟล์ CSV';
+                }
+              }
+            }
+          },
+          scales: {
+            y: { title: { display: true, text: 'จำนวนพัสดุ (รายการ)' }, beginAtZero: true, grid: { color: 'rgba(150, 150, 150, 0.1)' } },
+            x: { ticks: { autoSkip: false, maxRotation: 35 } }
+          }
+        }
+      });
+    }
+
+    function setChartType(chartKey, type) {
+      if (chartKey === 'status') {
+        statusChartType = type;
+        document.getElementById('btnStatusPie').classList.toggle('active', type === 'doughnut');
+        document.getElementById('btnStatusBar').classList.toggle('active', type === 'bar');
+        renderChartStatus();
+      }
+    }
+
+    function renderChartStatus() {
+      const ctx = document.getElementById('chartStatus');
+      if (!ctx) return;
+
+      const statusMap = {};
+      activeDataRows.forEach(r => {
+        const s = (r[13] || '').trim() || 'ไม่ระบุสถานะ';
+        statusMap[s] = (statusMap[s] || 0) + 1;
+      });
+
+      if (chartInstances.status) chartInstances.status.destroy();
+
+      const palette = ['#10b981', '#f43f5e', '#3b82f6', '#059669', '#f59e0b', '#64748b', '#047857'];
+
+      chartInstances.status = new Chart(ctx, {
+        type: statusChartType,
+        data: {
+          labels: Object.keys(statusMap),
+          datasets: [{
+            label: 'จำนวนพัสดุ (รายการ)',
+            data: Object.values(statusMap),
+            backgroundColor: palette,
+            borderRadius: statusChartType === 'bar' ? 6 : 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom', labels: { boxWidth: 12 } }
+          },
+          scales: statusChartType === 'bar' ? {
+            y: { title: { display: true, text: 'จำนวนพัสดุ (รายการ)' }, beginAtZero: true }
+          } : {}
+        }
+      });
+    }
+
+    function toggleProvinceOutlier(isClean) {
+      provinceCleanMode = isClean;
+      document.getElementById('btnProvValid').classList.toggle('active', isClean);
+      document.getElementById('btnProvAll').classList.toggle('active', !isClean);
+      renderChartProvince();
+    }
+
+    function renderChartProvince() {
+      const ctx = document.getElementById('chartProvince');
+      if (!ctx) return;
+
+      const provMap = {};
+      activeDataRows.forEach(r => {
+        const prov = (r[4] || '').trim() || 'ไม่ระบุจังหวัด';
+        const rawCost = (r[9] || '').replace(/,/g, '').replace(/"/g, '').trim();
+        if (rawCost && !isNaN(rawCost)) {
+          const val = parseFloat(rawCost);
+          if (provinceCleanMode) {
+            // Clean criteria: positive and realistic
+            if (val > 0 && val < 10000) {
+              provMap[prov] = (provMap[prov] || 0) + val;
+            }
+          } else {
+            // Raw all numeric
+            provMap[prov] = (provMap[prov] || 0) + val;
+          }
+        }
+      });
+
+      if (chartInstances.province) chartInstances.province.destroy();
+
+      chartInstances.province = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: Object.keys(provMap),
+          datasets: [{
+            label: 'ค่าจัดส่งรวม (บาท)',
+            data: Object.values(provMap).map(v => Math.round(v)),
+            backgroundColor: '#0ea5e9',
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: function(ctx) {
+                  return `ค่าจัดส่ง: ${ctx.parsed.y.toLocaleString()} บาท`;
+                }
+              }
+            }
+          },
+          scales: {
+            y: { title: { display: true, text: 'ค่าจัดส่งรวม (บาท)' }, beginAtZero: true },
+            x: { ticks: { autoSkip: false, maxRotation: 35 } }
+          }
+        }
+      });
+    }
+
+    function renderChartMonthly() {
+      const ctx = document.getElementById('chartMonthly');
+      if (!ctx) return;
+
+      const monthMap = {};
+      activeDataRows.forEach(r => {
+        const pDate = (r[1] || '').trim();
+        if (pDate && pDate.startsWith('2026-')) {
+          const m = pDate.substring(0, 7); // '2026-01', '2026-02', ...
+          monthMap[m] = (monthMap[m] || 0) + 1;
+        } else if (pDate.includes('/')) {
+          // Format with slash (e.g., 31/13/2026, 2026/04/15)
+          const mKey = 'รูปแบบวันที่ผิดพลาด';
+          monthMap[mKey] = (monthMap[mKey] || 0) + 1;
+        }
+      });
+
+      // Sort chronological
+      const sortedKeys = Object.keys(monthMap).sort();
+
+      if (chartInstances.monthly) chartInstances.monthly.destroy();
+
+      chartInstances.monthly = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: sortedKeys.map(k => {
+            if (k === 'รูปแบบวันที่ผิดพลาด') return k;
+            const parts = k.split('-');
+            const months = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+            return `${months[parseInt(parts[1])] || k} 2569`;
+          }),
+          datasets: [{
+            label: 'จำนวนพัสดุรับเข้าระบบ (รายการ)',
+            data: sortedKeys.map(k => monthMap[k]),
+            borderColor: '#6366f1',
+            backgroundColor: 'rgba(99, 102, 241, 0.1)',
+            fill: true,
+            tension: 0.3,
+            borderWidth: 2.5,
+            pointRadius: 5,
+            pointBackgroundColor: '#4f46e5'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            y: { title: { display: true, text: 'จำนวนพัสดุ (รายการ)' }, beginAtZero: true },
+            x: { grid: { display: false } }
+          }
+        }
+      });
+    }
+
+    // =========================================================
+    // VIEW 3: DATA QUALITY METRICS & SUMMARY (ภารกิจที่ 5: 10 คะแนน)
+    // =========================================================
+    function updateQualitySummaryMetrics() {
+      // Group anomalies by row (excluding contextual valid empties for clean row calculations)
+      const actionableIssues = detectedAnomalies.filter(a => a.severity !== 'ค่าว่างที่อาจสมเหตุสมผล');
+      const rowIssueMap = {};
+
+      actionableIssues.forEach(a => {
+        rowIssueMap[a.row] = (rowIssueMap[a.row] || 0) + 1;
+      });
+
+      const atLeastOne = Object.keys(rowIssueMap).length;
+      const moreThanOne = Object.values(rowIssueMap).filter(cnt => cnt > 1).length;
+      const cleanRows = rawDataRows.length - atLeastOne;
+
+      document.getElementById('dqAtLeastOne').textContent = atLeastOne.toLocaleString();
+      document.getElementById('dqMoreThanOne').textContent = moreThanOne.toLocaleString();
+      document.getElementById('dqCleanRows').textContent = cleanRows.toLocaleString();
+      document.getElementById('dqTotalIssues').textContent = actionableIssues.length.toLocaleString();
+
+      // Quality score
+      const score = ((cleanRows / rawDataRows.length) * 100).toFixed(1);
+      document.getElementById('qualityScoreVal').textContent = `${score}%`;
+      document.getElementById('cleanRowsSummaryText').textContent = `${cleanRows} แถวจาก ${rawDataRows.length} แถว ปราศจากข้อผิดพลาด`;
+
+      // Category breakdown counts
+      const catCount = {
+        'Missing Values': 0, 'Outliers': 0, 'Invalid Data': 0, 'Duplicates': 0, 'Inconsistent Data': 0
+      };
+      actionableIssues.forEach(a => {
+        if (catCount[a.type] !== undefined) catCount[a.type]++;
+      });
+
+      document.getElementById('countMissing').textContent = `${catCount['Missing Values']} จุด`;
+      document.getElementById('countOutliers').textContent = `${catCount['Outliers']} จุด`;
+      document.getElementById('countInvalid').textContent = `${catCount['Invalid Data']} จุด`;
+      document.getElementById('countDuplicates').textContent = `${catCount['Duplicates']} จุด`;
+      document.getElementById('countInconsistent').textContent = `${catCount['Inconsistent Data']} จุด`;
+    }
+
+    // =========================================================
+    // VIEW 4: ERROR REPORT TABLE (ภารกิจที่ 4: 15 คะแนน)
+    // =========================================================
+    function renderErrorTable() {
+      const search = (document.getElementById('errorSearchInput').value || '').trim().toLowerCase();
+      const typeFilter = document.getElementById('errorTypeFilter').value;
+      const sevFilter = document.getElementById('errorSeverityFilter').value;
+      const tbody = document.getElementById('errorTableBody');
+      tbody.innerHTML = '';
+
+      const filtered = detectedAnomalies.filter(item => {
+        if (typeFilter && item.type !== typeFilter) return false;
+        if (sevFilter && item.severity !== sevFilter) return false;
+        if (search) {
+          const matchPkg = item.pkg.toLowerCase().includes(search);
+          const matchRow = String(item.row).includes(search);
+          const matchCol = item.col.toLowerCase().includes(search);
+          const matchDesc = item.desc.toLowerCase().includes(search);
+          if (!matchPkg && !matchRow && !matchCol && !matchDesc) return false;
+        }
+        return true;
+      });
+
+      document.getElementById('errorTableShowingCount').textContent = filtered.length.toLocaleString();
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" class="empty-state">
+              <div class="empty-state-icon">🔍</div>
+              <div>ไม่พบรายการข้อผิดพลาดตามเงื่อนไขการค้นหา</div>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      filtered.forEach(item => {
+        const tr = document.createElement('tr');
+
+        // Badge class by severity
+        let badgeClass = 'badge-neutral';
+        if (item.severity === 'ผิดแน่นอน') badgeClass = 'badge-error';
+        else if (item.severity === 'ควรตรวจสอบ') badgeClass = 'badge-warning';
+        else if (item.severity === 'ค่าว่างที่อาจสมเหตุสมผล') badgeClass = 'badge-info';
+
+        tr.innerHTML = `
+          <td><span class="cell-mono">แถว ${item.row}</span></td>
+          <td><strong class="cell-mono">${escapeHtml(item.pkg || '-')}</strong></td>
+          <td>${escapeHtml(item.col)}</td>
+          <td><span class="raw-val-cell">${escapeHtml(item.val === '' ? '(ว่าง)' : item.val)}</span></td>
+          <td><span class="badge badge-neutral">${escapeHtml(item.type)}</span></td>
+          <td style="line-height: 1.4;">${escapeHtml(item.desc)}</td>
+          <td><span class="badge ${badgeClass}">${escapeHtml(item.severity)}</span></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function filterTableByType(typeName) {
+      switchView('errors');
+      document.getElementById('errorTypeFilter').value = typeName;
+      document.getElementById('errorSeverityFilter').value = '';
+      renderErrorTable();
+    }
+
+    function setTableFilter(severity) {
+      document.getElementById('errorSeverityFilter').value = severity;
+      document.getElementById('errorTypeFilter').value = '';
+      renderErrorTable();
+    }
+
+    // =========================================================
+    // VIEW 5: RAW DATASET INSPECTOR
+    // =========================================================
+    function renderRawTable() {
+      const thead = document.getElementById('rawTableHeader');
+      const tbody = document.getElementById('rawTableBody');
+      const search = (document.getElementById('rawSearchInput').value || '').trim().toLowerCase();
+
+      // Render Header
+      if (thead.children.length === 0 && rawHeaders.length > 0) {
+        let hHtml = '<tr><th style="width: 60px;"># แถว</th>';
+        rawHeaders.forEach(h => {
+          hHtml += `<th>${escapeHtml(h)}</th>`;
+        });
+        hHtml += '</tr>';
+        thead.innerHTML = hHtml;
+      }
+
+      tbody.innerHTML = '';
+
+      // Create quick anomaly lookup: row -> colName -> anomaly
+      const rowColAnomalyMap = {};
+      detectedAnomalies.forEach(a => {
+        if (!rowColAnomalyMap[a.row]) rowColAnomalyMap[a.row] = {};
+        rowColAnomalyMap[a.row][a.col] = a;
+      });
+
+      let renderCount = 0;
+      rawDataRows.forEach((row, idx) => {
+        const csvRow = idx + 2;
+
+        if (search) {
+          const rowText = row.join(' ').toLowerCase();
+          if (!rowText.includes(search) && !String(csvRow).includes(search)) return;
+        }
+
+        renderCount++;
+        const tr = document.createElement('tr');
+        let rHtml = `<td><span class="cell-mono">${csvRow}</span></td>`;
+
+        row.forEach((cellVal, colIdx) => {
+          const colName = rawHeaders[colIdx];
+          const anomaly = rowColAnomalyMap[csvRow] ? rowColAnomalyMap[csvRow][colName] : null;
+
+          let cellClass = '';
+          let titleAttr = '';
+          if (anomaly) {
+            if (anomaly.severity === 'ผิดแน่นอน') {
+              cellClass = 'has-issue-cell';
+              titleAttr = `title="[ผิดแน่นอน] ${anomaly.desc}"`;
+            } else if (anomaly.severity === 'ควรตรวจสอบ') {
+              cellClass = 'has-warning-cell';
+              titleAttr = `title="[ควรตรวจสอบ] ${anomaly.desc}"`;
+            }
+          }
+
+          rHtml += `<td class="${cellClass}" ${titleAttr}>${escapeHtml(cellVal === '' ? '-' : cellVal)}</td>`;
+        });
+
+        tr.innerHTML = rHtml;
+        tbody.appendChild(tr);
+      });
+
+      if (renderCount === 0) {
+        tbody.innerHTML = `<tr><td colspan="${rawHeaders.length + 1}" class="empty-state">ไม่พบข้อมูลที่ตรงกับคำค้นหา</td></tr>`;
+      }
+    }
+
+    // =========================================================
+    // VIEW 6: BUSINESS IMPACT & RECONCILIATION
+    // =========================================================
+    function updateBusinessImpactComparison() {
+      // 1. Raw Shipping Sum without any filter
+      let rawShippingSum = 0;
+      let rawShippingCount = 0;
+      rawDataRows.forEach(r => {
+        const valStr = (r[9] || '').replace(/,/g, '').replace(/"/g, '').trim();
+        if (valStr && !isNaN(valStr)) {
+          rawShippingSum += parseFloat(valStr);
+          rawShippingCount++;
+        }
+      });
+      document.getElementById('impactRawShipping').textContent = `${rawShippingSum.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท (${rawShippingCount} รายการ)`;
+
+      // 2. Clean Shipping Sum with Rules
+      let cleanShippingSum = 0;
+      let cleanShippingCount = 0;
+      rawDataRows.forEach(r => {
+        const valStr = (r[9] || '').replace(/,/g, '').replace(/"/g, '').trim();
+        if (valStr && !isNaN(valStr)) {
+          const v = parseFloat(valStr);
+          if (v > 0 && v < 10000) {
+            cleanShippingSum += v;
+            cleanShippingCount++;
+          }
+        }
+      });
+      document.getElementById('impactCleanShipping').textContent = `${cleanShippingSum.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท (${cleanShippingCount} รายการ)`;
+
+      // 3. Raw Delivery Days
+      let rawDaysSum = 0;
+      let rawDaysCount = 0;
+      rawDataRows.forEach(r => {
+        const dStr = (r[14] || '').trim();
+        if (dStr && !isNaN(dStr)) {
+          rawDaysSum += parseFloat(dStr);
+          rawDaysCount++;
+        }
+      });
+      const rawAvgDays = rawDaysCount > 0 ? (rawDaysSum / rawDaysCount).toFixed(2) : '0';
+      document.getElementById('impactRawDays').textContent = `${rawAvgDays} วัน (${rawDaysCount} รายการ)`;
+
+      // 4. Clean Delivery Days
+      let cleanDaysSum = 0;
+      let cleanDaysCount = 0;
+      rawDataRows.forEach(r => {
+        const s = (r[13] || '').trim();
+        const dStr = (r[14] || '').trim();
+        if (dStr && !isNaN(dStr)) {
+          const d = parseFloat(dStr);
+          if (d > 0 && d <= 30 && ['ส่งสำเร็จ', 'สำเร็จ', 'Delivered'].includes(s)) {
+            cleanDaysSum += d;
+            cleanDaysCount++;
+          }
+        }
+      });
+      const cleanAvgDays = cleanDaysCount > 0 ? (cleanDaysSum / cleanDaysCount).toFixed(2) : '0';
+      document.getElementById('impactCleanDays').textContent = `${cleanAvgDays} วัน (${cleanDaysCount} รายการ)`;
+    }
+
+    // =========================================================
+    // EXPORT REPORT (CSV)
+    // =========================================================
+    function exportErrorReportCsv() {
+      if (detectedAnomalies.length === 0) {
+        alert('ไม่พบรายการข้อผิดพลาดที่จะส่งออก');
+        return;
+      }
+
+      const headers = ['แถวใน CSV', 'รหัสพัสดุ', 'ชื่อคอลัมน์', 'ค่าเดิม', 'ประเภทความผิดปกติ', 'คำอธิบายสาเหตุ', 'ระดับการแจ้งเตือน'];
+      const rows = detectedAnomalies.map(a => [
+        a.row,
+        `"${a.pkg.replace(/"/g, '""')}"`,
+        `"${a.col.replace(/"/g, '""')}"`,
+        `"${String(a.val).replace(/"/g, '""')}"`,
+        `"${a.type.replace(/"/g, '""')}"`,
+        `"${a.desc.replace(/"/g, '""')}"`,
+        `"${a.severity.replace(/"/g, '""')}"`
+      ]);
+
+      const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(e => e.join(','))].join('\r\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `data_quality_report_${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // =========================================================
+    // THEME & FILE UPLOAD HANDLERS
+    // =========================================================
+    function toggleTheme() {
+      const html = document.documentElement;
+      const current = html.getAttribute('data-theme') || 'light';
+      const target = current === 'light' ? 'dark' : 'light';
+      html.setAttribute('data-theme', target);
+
+      const icon = document.getElementById('themeIcon');
+      icon.setAttribute('data-lucide', target === 'light' ? 'moon' : 'sun');
+      lucide.createIcons();
+
+      // Refresh charts colors
+      if (currentView === 'charts') renderAllCharts();
+      if (currentView === 'overview') renderOverviewStatusChart();
+    }
+
+    function triggerCsvUpload() {
+      document.getElementById('csvFileInput').click();
+    }
+
+    function handleFileUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        parseAndProcessCsv(e.target.result, file.name);
+        alert(`โหลดไฟล์ ${file.name} สำเร็จเรียบร้อย`);
+      };
+      reader.readAsText(file, 'UTF-8');
+    }
+
+    function resetToDefaultData() {
+      loadInitialCsv();
+    }
+
+    // Utility: Escape HTML
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+  </script>
+</body>
+</html>
